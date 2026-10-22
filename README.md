@@ -67,6 +67,10 @@ Word·Excel·PowerPoint 문서를 변환하려면 처음 한 번 **문서 변환
 
 ## 개발
 
+Windows 11 x64용 C#/.NET 앱도 별도 개발 중입니다. 현재 실행 가능한 기능과 빌드 방법은 [Windows 개발 안내](windows/README.md), 합의한 전체 범위는 [Windows 개발 명세](docs/windows.md)를 참고하세요.
+
+Windows 설치 파일은 GitHub Actions에서 빌드하며, Mac에서 아티팩트를 받아 기존 Cloudflare Worker/R2로 배포합니다. [Mac에서 Windows 배포하기](docs/windows-deployment.md)를 참고하세요.
+
 Xcode 없이 Command Line Tools만으로 빌드해요.
 
 ```bash

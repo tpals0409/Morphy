@@ -1,0 +1,85 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+
+namespace Morphy;
+
+internal static class SelfTest
+{
+    internal static int Run()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "Morphy-selftest-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(root);
+        try
+        {
+            void Check(bool value, string why) { if (!value) throw new Exception(why); }
+            Check(RadialMenu.Hit(0, 0) == -1, "Center must cancel");
+            Check(RadialMenu.Hit(0, -140) == -1, "Outside must cancel");
+            Check(RadialMenu.Hit(0, -95) == 0, "Top slot");
+            Check(RadialMenu.Hit(82, -48) == 1, "Upper-right slot");
+            Check(RadialMenu.Hit(-82, -48) == 5, "Upper-left slot");
+            Check(!Conversion.Outputs("test.JPEG").Any(f => f.Extension == "jpg"), "Alias exclusion");
+            Check(Conversion.Outputs("test.exe").Length == 0, "Unsupported input");
+            var frame = BitmapSource.Create(2, 2, 96, 96, PixelFormats.Bgra32, null, new byte[] { 0, 0, 255, 255, 0, 255, 0, 255, 255, 0, 0, 255, 0, 0, 0, 0 }, 8);
+            string source = Path.Combine(root, "한글 원본.png");
+            var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(frame));
+            using (var file = File.Create(source)) encoder.Save(file);
+            byte[] original = File.ReadAllBytes(source);
+            foreach (var format in Conversion.Outputs(source))
+            {
+                string output = Conversion.Run(source, format, root);
+                Check(File.Exists(output), $"Missing {format.Name}");
+                if (format.Extension == "pdf") { using var pdf = new PdfEngine(output); Check(pdf.PageCount == 1, "PDF page"); }
+                else
+                {
+                    using var result = Conversion.ReadImage(output);
+                    Check(result.Width == 2 && result.Height == 2, "Dimensions");
+                }
+                string second = Conversion.Run(source, format, root);
+                Check(second != output && second.Contains("(1)"), "Collision must not overwrite");
+            }
+            Check(original.SequenceEqual(File.ReadAllBytes(source)), "Original changed");
+            string corrupt = Path.Combine(root, "bad.png"); File.WriteAllText(corrupt, "not an image");
+            bool rejected = false; try { Conversion.Run(corrupt, Conversion.Formats[0], root); } catch { rejected = true; }
+            Check(rejected && !File.Exists(Path.Combine(root, "bad.pdf")), "Corrupt input must not publish");
+            string mismatch = Path.Combine(root, "wrong.jpg"); File.Copy(source, mismatch);
+            rejected = false; try { Conversion.ReadImage(mismatch); } catch { rejected = true; }
+            Check(rejected, "Mismatched extension must fail");
+            Check(!Directory.GetFiles(root, ".morphy-*").Any(), "Temporary output leaked");
+            foreach (var route in Conversion.OfficeRoutes)
+            {
+                var options = Conversion.Outputs("file." + route.Key);
+                Check(options.Select(f => f.Slot).Where(s => s >= 0).Distinct().Count() == options.Count(f => f.Slot >= 0), "Duplicate ring slots: " + route.Key);
+            }
+            string svg = Path.Combine(root, "벡터.svg");
+            File.WriteAllText(svg, "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"120\" height=\"80\"><rect width=\"120\" height=\"80\" fill=\"red\"/><circle cx=\"50\" cy=\"40\" r=\"20\" fill=\"blue\"/></svg>");
+            string vector = Conversion.Run(svg, Conversion.Formats.Single(f => f.Extension == "pdf"), root);
+            using (var pdf = new PdfEngine(vector)) Check(pdf.PageCount == 1, "SVG vector PDF");
+            Check(!File.ReadAllText(vector).Contains("/Subtype /Image"), "SVG must remain vector");
+            string raster = Conversion.Run(vector, Conversion.Formats.Single(f => f.Extension == "png"), root);
+            using (var bitmap = Conversion.ReadImage(raster)) Check(bitmap.Width == 240 && bitmap.Height == 160, "PDF raster dimensions");
+            File.WriteAllText(svg, "<svg xmlns=\"http://www.w3.org/2000/svg\"><image href=\"https://example.com/secret.png\"/></svg>");
+            rejected = false; try { Conversion.Run(svg, Conversion.Formats[0], root); } catch { rejected = true; }
+            Check(rejected, "External SVG resources must be rejected");
+            string cp949 = Path.Combine(root, "cp949.txt");
+            System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+            File.WriteAllBytes(cp949, System.Text.Encoding.GetEncoding(949).GetBytes("한글 공백 검증"));
+            Check(OfficeEngine.DecodeText(cp949) == "한글 공백 검증", "CP949 text");
+            using var cancelled = new System.Threading.CancellationTokenSource(); cancelled.Cancel();
+            rejected = false; try { ConversionWorker.Run(source, Conversion.Formats[0], root, cancelled.Token).GetAwaiter().GetResult(); } catch (OperationCanceledException) { rejected = true; }
+            Check(rejected && !Directory.GetDirectories(root, ".morphy-*").Any(), "Worker cancellation cleanup");
+            PackagingTests.Run(root, Check);
+            using var stop = new System.Threading.CancellationTokenSource(TimeSpan.FromMilliseconds(250));
+            rejected = false;
+            try { ProcessRunner.Run(Path.Combine(Environment.SystemDirectory, "ping.exe"), ["-t", "127.0.0.1"], stop.Token).GetAwaiter().GetResult(); }
+            catch (OperationCanceledException) { rejected = true; }
+            Check(rejected, "Running process cancellation");
+            File.WriteAllText(Path.Combine(AppContext.BaseDirectory, "selftest-result.txt"), "PASS: ring hit testing, all image encoders including HEIC/WEBP, PDF re-open/render, vector SVG, CP949, Korean paths, collision protection, originals, corrupt inputs, external SVG rejection, cancellation cleanup, update URL/digest/version rules, package traversal/hash rejection\n");
+            return 0;
+        }
+        catch (Exception e) { File.WriteAllText(Path.Combine(AppContext.BaseDirectory, "selftest-result.txt"), e.ToString()); return 1; }
+        finally { Directory.Delete(root, true); }
+    }
+}

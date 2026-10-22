@@ -2,7 +2,7 @@
 # dependencies = ["python-docx", "openpyxl", "python-pptx"]
 # ///
 """Office → PDF test corpus (PRD 17 문서 품질). Usage: uv run scripts/make_corpus.py <out_dir>"""
-import shutil, struct, subprocess, sys, zlib
+import os, shutil, struct, subprocess, sys, zlib
 from pathlib import Path
 
 from docx import Document
@@ -65,9 +65,10 @@ csv = "이름,금액,메모\n홍길동,1000,\"쉼표, 포함\"\n김철수,2500,�
 (out / "README 한글.md").write_text("# 마크다운 제목\n\n- 목록 **굵게**\n- 두 번째\n\n| 이름 | 값 |\n|---|---|\n| 가 | 1 |\n\n```\ncode 블록\n```\n", encoding="utf-8")
 
 # Legacy/ODF inputs, made by LibreOffice itself from the files above.
-so = shutil.which("soffice") or "/Applications/LibreOffice.app/Contents/MacOS/soffice"
+so = os.environ.get("MORPHY_ENGINE_PATH") or shutil.which("soffice") or "/Applications/LibreOffice.app/Contents/MacOS/soffice"
+profile = (out.resolve() / ".lo-corpus-profile").as_uri()
 for src, targets in [("보고서 한글.docx", ["doc", "odt", "rtf"]), ("매출 표.xlsx", ["xls", "ods"]), ("발표 16x9.pptx", ["ppt", "odp"])]:
     for t in targets:
-        subprocess.run([so, "--headless", "--convert-to", t, "--outdir", str(out), str(out / src)], capture_output=True, check=True)
+        subprocess.run([so, "-env:UserInstallation=" + profile, "--headless", "--norestore", "--convert-to", t, "--outdir", str(out), str(out / src)], capture_output=True, check=True, timeout=90)
 img.unlink()
 print("\n".join(sorted(p.name for p in out.iterdir())))
