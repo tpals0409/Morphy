@@ -1,0 +1,6 @@
+// Cloudflare Worker serving the static product page in web/ (no Worker script; assets only).
+{
+  "name": "morphy",
+  "compatibility_date": "2026-10-01",
+  "assets": { "directory": "./web" }
+}
