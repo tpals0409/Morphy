@@ -58,15 +58,15 @@ xcrun notarytool store-credentials morphy-notary --apple-id "<Apple ID 이메일
 
 ### 웹 페이지에 올리기
 
-상세페이지는 Cloudflare Worker `morphy`(`wrangler.jsonc`)가 띄운다. DMG는 Worker 정적 파일(`web/releases/`, git에는 넣지 않음)로 올리고, 버전·SHA-256·크기는 D1 `morphy`의 `releases` 표에 넣는다. `/download`는 표에서 가장 최근 버전으로 넘겨주고, 페이지 푸터는 `/api/release`에서 버전과 SHA-256을 읽는다.
+상세페이지는 Cloudflare Worker `morphy`(`wrangler.jsonc`)가 띄운다. DMG는 Worker 정적 파일(`web/releases/`, git에 커밋)로 올리고, 버전·SHA-256·크기는 D1 `morphy`의 `releases` 표에 넣는다. `/download`는 표에서 가장 최근 버전으로 넘겨주고, 페이지 푸터는 `/api/release`에서 버전과 SHA-256을 읽는다.
 
 ```bash
-cp build/Morphy-<버전>.dmg web/releases/
+cp build/Morphy-<버전>.dmg web/releases/ && git add web/releases && git commit -m "Release <버전>" && git push
 npx wrangler d1 execute morphy --remote --command "INSERT INTO releases (version, path, sha256, bytes) VALUES ('<버전>', '/releases/Morphy-<버전>.dmg', '<SHA-256>', <바이트>)"
-npx wrangler deploy
 ```
 
-- 지난 버전 DMG도 `web/releases/`에 남겨 둬야 한다. 배포할 때 폴더에 없는 파일은 사이트에서 사라진다.
+- Worker가 GitHub에 연결돼 있어서 main에 push하면 Cloudflare가 git 내용으로 다시 배포한다. 그래서 DMG도 커밋해야 하고, 지난 버전 DMG도 지우지 않는다. 폴더에 없는 파일은 사이트에서 사라진다.
+- D1에 새 행을 넣는 것은 git과 별개다. DMG를 커밋해 배포된 뒤에 넣는다.
 - Worker 정적 파일은 한 파일에 25MB까지다. 넘으면 R2로 옮긴다(계정에서 R2를 먼저 켜야 한다).
 
 공증이 거절되면 `xcrun notarytool log <제출 ID> --keychain-profile morphy-notary`로 이유를 본다.

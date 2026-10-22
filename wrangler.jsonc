@@ -7,5 +7,11 @@
   "assets": { "directory": "./web", "binding": "ASSETS" },
   "d1_databases": [
     { "binding": "DB", "database_name": "morphy", "database_id": "5778d8dc-3d79-4ede-be37-ebe2ec1a769d" }
-  ]
+  ],
+  // PR previews read the same releases table; the Worker only runs SELECTs on it.
+  "previews": {
+    "d1_databases": [
+      { "binding": "DB", "database_name": "morphy", "database_id": "5778d8dc-3d79-4ede-be37-ebe2ec1a769d" }
+    ]
+  }
 }
