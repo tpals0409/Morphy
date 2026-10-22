@@ -56,6 +56,19 @@ xcrun notarytool store-credentials morphy-notary --apple-id "<Apple ID 이메일
 5. 공증 확인서를 DMG에 붙인다(`stapler staple`). 그러면 인터넷이 없어도 Gatekeeper를 통과한다.
 6. `spctl`로 Gatekeeper 통과 여부를 확인하고, 웹 페이지에 올릴 SHA-256을 출력한다.
 
+### 웹 페이지에 올리기
+
+상세페이지는 Cloudflare Worker `morphy`(`wrangler.jsonc`)가 띄운다. DMG는 Worker 정적 파일(`web/releases/`, git에는 넣지 않음)로 올리고, 버전·SHA-256·크기는 D1 `morphy`의 `releases` 표에 넣는다. `/download`는 표에서 가장 최근 버전으로 넘겨주고, 페이지 푸터는 `/api/release`에서 버전과 SHA-256을 읽는다.
+
+```bash
+cp build/Morphy-<버전>.dmg web/releases/
+npx wrangler d1 execute morphy --remote --command "INSERT INTO releases (version, path, sha256, bytes) VALUES ('<버전>', '/releases/Morphy-<버전>.dmg', '<SHA-256>', <바이트>)"
+npx wrangler deploy
+```
+
+- 지난 버전 DMG도 `web/releases/`에 남겨 둬야 한다. 배포할 때 폴더에 없는 파일은 사이트에서 사라진다.
+- Worker 정적 파일은 한 파일에 25MB까지다. 넘으면 R2로 옮긴다(계정에서 R2를 먼저 켜야 한다).
+
 공증이 거절되면 `xcrun notarytool log <제출 ID> --keychain-profile morphy-notary`로 이유를 본다.
 
 ## 권한(entitlements)

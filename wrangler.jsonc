@@ -1,6 +1,11 @@
-// Cloudflare Worker serving the static product page in web/ (no Worker script; assets only).
+// Cloudflare Worker "morphy": the product page and DMGs in web/ are static assets;
+// src/index.js answers /download and /api/release from the D1 releases table.
 {
   "name": "morphy",
+  "main": "src/index.js",
   "compatibility_date": "2026-10-01",
-  "assets": { "directory": "./web" }
+  "assets": { "directory": "./web", "binding": "ASSETS" },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "morphy", "database_id": "5778d8dc-3d79-4ede-be37-ebe2ec1a769d" }
+  ]
 }
