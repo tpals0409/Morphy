@@ -26,6 +26,7 @@ rm -rf "$APP" && mkdir -p "$APP/Contents/MacOS"
 cp .build/release/Morphy "$APP/Contents/MacOS/"
 cp Info.plist "$APP/Contents/"
 mkdir -p "$APP/Contents/Resources" && cp assets/AppIcon.icns "$APP/Contents/Resources/"  # regenerate: swift scripts/make_icon.swift
+cp LICENSE "$APP/Contents/Resources/LICENSE.txt"
 codesign --force --options runtime --entitlements Morphy.entitlements $STAMP --sign "${SIGN:--}" "$APP"
 
 dmg() {

@@ -124,3 +124,11 @@ build/Morphy.app/Contents/MacOS/Morphy --selftest /tmp/corpus
 ## 상태
 
 개발 초기(0.1.0)예요. 아직 공증을 받지 않아서, 다른 Mac에서는 내려받은 앱이 경고 없이 열리지 않아요. 남은 일은 [docs/release.md](docs/release.md)에 있어요.
+
+## Code signing policy
+
+Windows 코드 서명은 SignPath Foundation 신청 준비 중이며 아직 승인되거나 적용되지 않았습니다. 담당자·승인 절차·네트워크 사용 내용은 [Code signing policy](web/code-signing.html)에 정리했습니다.
+
+## License
+
+Morphy 자체 코드는 [MIT License](LICENSE)로 배포합니다. 외부 라이브러리와 문서 변환 엔진은 각자의 라이선스를 유지하며, [Windows 외부 구성 요소 안내](windows/THIRD-PARTY.md)와 배포본의 고지문을 참고하세요.

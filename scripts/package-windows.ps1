@@ -25,6 +25,7 @@ if ($CertificateThumbprint) {
     if ($LASTEXITCODE -ne 0) { throw 'App signing failed' }
 }
 $notices = Join-Path $app 'ThirdParty'
+Copy-Item -LiteralPath (Join-Path $repo 'LICENSE') -Destination (Join-Path $app 'LICENSE.txt')
 New-Item -ItemType Directory -Force $notices | Out-Null
 Copy-Item -LiteralPath (Join-Path $repo 'windows\THIRD-PARTY.md') -Destination $notices
 # Preserve available notices from the exact locked package versions.

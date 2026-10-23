@@ -84,3 +84,27 @@ Mac 링크가 여전히 DMG를 가리키는지, Windows 링크가 EXE를 가리�
 ## 기본 설치 경험
 
 Windows 설치 파일을 실행하면 별도의 기능 선택 질문 없이 Morphy 설치를 시작한다. 이미지·문서 변환에 필요한 구성 요소를 모두 기본으로 준비하며, 이미 설치된 문서 엔진은 재사용한다. 설치 중에는 취소할 수 있고, 필요한 구성 요소 준비에 실패하면 설치를 완료한 것으로 처리하지 않는다.
+
+## SignPath Foundation 신청 준비
+
+현재 상태는 **신청 준비 중**이다. 인증서 발급이나 프로덕션 서명 활성화가 완료된 상태가 아니다.
+
+- 신청: https://signpath.org/apply.html
+- 자격·정책: https://signpath.org/terms.html
+- 공개 정책 초안: `web/code-signing.html` (푸시·웹 배포 후 `/code-signing.html`)
+- 소유자 결정에 따라 Morphy 자체 코드에는 루트 `LICENSE`의 MIT 라이선스를 적용했다. 외부 구성 요소의 라이선스는 `windows/THIRD-PARTY.md`를 따른다.
+- 신청 담당자의 이름·이메일, MFA 설정, 코드 서명 승인 담당자 및 약관 동의는 소유자가 확인해야 한다. GitHub noreply 주소를 신청 연락처로 사용하지 않는다.
+- 신청서에는 초기 프로젝트라는 사실과 공개 GitHub Actions 검사 기록을 기재하며, 확인되지 않은 사용자 수나 평판을 주장하지 않는다.
+
+### 승인 후 CI 연결 순서
+
+SignPath가 발급한 organization ID, project slug, artifact configuration, signing policy 및 GitHub 연동 권한이 확정된 후 활성화한다. 현재 무서명 배포 CI에 임의의 ID나 활성화 플래그를 넣지 않는다.
+
+1. 공식 GitHub Actions 빌드의 `Morphy.exe`를 먼저 서명하고, 유효한 Authenticode 서명을 확인한다. 외부 DLL을 Morphy 소유 코드로 재서명하지 않는다.
+2. **서명된 앱** 기준으로 `bundle-manifest.json`을 생성하고 설치본 payload를 만든다. 앱 서명 후 기존 manifest를 재사용하면 설치 중 해시 검증이 실패한다.
+3. 설치 EXE도 서명하고 확인한 뒤 최종 `SHA256SUMS.txt`와 `windows-release.json`의 크기·해시를 생성한다.
+4. SignPath 정책에 필요한 승인 절차가 끝난 서명본만 R2에 게시한다. 서명 실패 시 무서명 파일로 대신 게시하지 않는다.
+5. CI의 수동 승인 대기 시간과 timeout을 검토한다. main push 후 빌드는 자동화하되, Foundation의 승인 정책을 우회하지 않는다.
+6. 기존 앱의 `Updates.Download`은 현재 앱이 서명되어 있으면 다음 설치본의 게시자 일치를 검사한다. 서명된 앱→서명된 업데이트까지 검증한 뒤 정책 페이지의 준비 중 상태를 갱신한다.
+
+공식 연동 문서: https://docs.signpath.io/trusted-build-systems/github
