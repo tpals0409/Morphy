@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -17,10 +17,11 @@ internal sealed class TrayApp : IDisposable
 {
     private readonly Settings settings = Settings.Load();
     private readonly Forms.NotifyIcon tray;
-    private readonly AltTrigger trigger;
+    private readonly ShortcutTrigger trigger;
     private readonly List<Job> jobs = [];
     private bool running;
     private bool maintenance;
+    private bool checkingUpdate;
     private CancellationTokenSource? currentCancellation;
     private Task<bool>? engineTask;
     private readonly ControlServer control;
@@ -32,43 +33,57 @@ internal sealed class TrayApp : IDisposable
         internal string State = "대기", Error = "";
         internal string[] Results = [];
     }
-    internal TrayApp(bool smoke = false)
+    internal TrayApp(bool smoke = false, bool checkUpdates = false)
     {
         tray = new Forms.NotifyIcon { Text = "Morphy " + Updates.Current, Icon = CreateIcon(), Visible = true };
-        trigger = new AltTrigger(() => settings.TriggerEnabled && !maintenance) { Convert = Enqueue };
-        control = new ControlServer(() => !running && !maintenance && engineTask == null);
+        trigger = new ShortcutTrigger(() => settings.TriggerEnabled && !maintenance) { Convert = Enqueue };
+        control = new ControlServer(() => !running && !maintenance && engineTask == null, () => _ = CheckUpdates(true));
         tray.MouseClick += (_, e) => { if (e.Button == Forms.MouseButtons.Left) ShowGuide(); };
         Refresh();
         if (!smoke && !settings.OnboardingShown) Application.Current.Dispatcher.BeginInvoke(ShowGuide);
-        if (!smoke) _ = CheckUpdates(false);
+        if (!smoke)
+        {
+            ConfigureTaskbar();
+            _ = CheckUpdates(checkUpdates);
+        }
+    }
+    private static void ConfigureTaskbar()
+    {
+        try
+        {
+            var list = new System.Windows.Shell.JumpList();
+            list.JumpItems.Add(new System.Windows.Shell.JumpTask
+            {
+                Title = "업데이트 확인…", Description = "Morphy의 새 버전을 확인합니다.",
+                ApplicationPath = Environment.ProcessPath!, Arguments = "--check-updates",
+                WorkingDirectory = AppContext.BaseDirectory,
+                IconResourcePath = Environment.ProcessPath!, IconResourceIndex = 0
+            });
+            System.Windows.Shell.JumpList.SetJumpList(Application.Current, list);
+            list.Apply();
+        }
+        catch (Exception e) { Settings.Log("Taskbar menu: " + e); }
     }
     private static System.Drawing.Icon CreateIcon()
     {
-        using var bitmap = new System.Drawing.Bitmap(32, 32);
-        using (var g = System.Drawing.Graphics.FromImage(bitmap))
-        {
-            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-            using var pen = new System.Drawing.Pen(System.Drawing.Color.FromArgb(122, 99, 245), 7);
-            g.DrawArc(pen, 7, 7, 19, 19, -25, 290);
-            g.DrawArc(pen, 8, 4, 19, 19, -88, 48);
-        }
-        nint handle = bitmap.GetHicon();
-        try { return (System.Drawing.Icon)System.Drawing.Icon.FromHandle(handle).Clone(); }
-        finally { DestroyIcon(handle); }
+        using var stream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("Morphy.Brand.ico")!;
+        using var icon = new System.Drawing.Icon(stream, 32, 32);
+        return (System.Drawing.Icon)icon.Clone();
     }
-    [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool DestroyIcon(nint icon);
     private void ShowGuide()
     {
         if (guide != null) { guide.Activate(); return; }
         var panel = new StackPanel { Margin = new Thickness(32) };
+        panel.Children.Add(Brand.LogoView(72));
         panel.Children.Add(new TextBlock { Text = "파일 변환, 손끝에서.", FontSize = 28, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 24) });
-        foreach (string line in new[] { "1   탐색기에서 파일 하나를 선택하세요.", "2   왼쪽 Alt를 잠깐 꾹 누르세요.", "3   원하는 형식 위에서 Alt를 놓으세요." }) panel.Children.Add(new TextBlock { Text = line, FontSize = 16, Margin = new Thickness(0, 0, 0, 16) });
-        panel.Children.Add(new TextBlock { Text = "가운데나 바깥에서 놓으면 취소돼요.\n원본은 그대로, 결과는 같은 폴더에 저장돼요.", FontSize = 13, Foreground = Brushes.DimGray, Margin = new Thickness(0, 8, 0, 20) });
+        foreach (string line in new[] { "1   탐색기에서 파일 하나를 선택하세요.", "2   Ctrl+Alt를 누른 채 원하는 형식으로 이동하세요.", "3   Ctrl 또는 Alt에서 손을 떼면 변환돼요." }) panel.Children.Add(new TextBlock { Text = line, FontSize = 16, Margin = new Thickness(0, 0, 0, 16) });
+        panel.Children.Add(new TextBlock { Text = "가운데나 바깥에서 놓으면 취소돼요. Esc로도 취소할 수 있어요.\n클릭이나 방향키·Enter로도 실행할 수 있어요.\n원본은 그대로, 결과는 같은 폴더에 저장돼요.", FontSize = 13, Foreground = Brushes.DimGray, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 20) });
         panel.Children.Add(new TextBlock { Text = "이미지 · PDF · Word · Excel · PowerPoint를 변환해요.\n문서 변환 기능은 앱 설치 때 함께 준비해요.\n파일은 외부로 보내지 않아요.", FontSize = 12, Foreground = Brushes.DimGray, TextWrapping = TextWrapping.Wrap });
         var button = new Button { Content = "시작하기", Padding = new Thickness(18, 10, 18, 10), Margin = new Thickness(0, 24, 0, 0), HorizontalAlignment = HorizontalAlignment.Right };
         button.Click += (_, _) => { settings.OnboardingShown = true; settings.Save(); guide?.Close(); };
         panel.Children.Add(button);
         guide = new Window { Title = "Morphy", Width = 490, SizeToContent = SizeToContent.Height, ResizeMode = ResizeMode.NoResize, WindowStartupLocation = WindowStartupLocation.CenterScreen, Content = panel, Background = Brushes.White };
+        Brand.Apply(guide);
         guide.Closed += (_, _) => guide = null;
         guide.Show();
     }
@@ -136,6 +151,7 @@ internal sealed class TrayApp : IDisposable
         var menu = new Forms.ContextMenuStrip();
         menu.Items.Add("Morphy " + Updates.Current).Enabled = false;
         menu.Items.Add("사용 방법", null, (_, _) => ShowGuide());
+        var update = menu.Items.Add("업데이트 확인…", null, async (_, _) => await CheckUpdates(true)); update.Enabled = !checkingUpdate && !running && !maintenance && engineTask == null;
         menu.Items.Add(new Forms.ToolStripSeparator());
         foreach (var job in jobs.TakeLast(20))
         {
@@ -164,8 +180,7 @@ internal sealed class TrayApp : IDisposable
                 try { EngineInstaller.Remove(); Refresh(); } catch (Exception e) { MessageBox.Show(e.Message, "Morphy"); }
             }); remove.Enabled = !running && engineTask == null;
         }
-        var update = menu.Items.Add("업데이트 확인…", null, async (_, _) => await CheckUpdates(true)); update.Enabled = !running && !maintenance && engineTask == null;
-        var shortcut = new Forms.ToolStripMenuItem("왼쪽 Alt로 메뉴 열기") { Checked = settings.TriggerEnabled };
+        var shortcut = new Forms.ToolStripMenuItem("Ctrl+Alt로 메뉴 열기") { Checked = settings.TriggerEnabled };
         shortcut.Click += (_, _) => { settings.TriggerEnabled = !settings.TriggerEnabled; settings.Save(); trigger.Close(); Refresh(); };
         menu.Items.Add(shortcut);
         var startup = new Forms.ToolStripMenuItem("로그인 시 실행") { Checked = Settings.AutoStart };
@@ -196,6 +211,13 @@ internal sealed class TrayApp : IDisposable
     }
     private async Task CheckUpdates(bool interactive)
     {
+        if (interactive && (running || maintenance || engineTask != null))
+        {
+            MessageBox.Show("진행 중인 작업이 끝난 뒤 업데이트를 확인해 주세요.", "Morphy 업데이트");
+            return;
+        }
+        if (interactive && checkingUpdate) return;
+        if (interactive) { checkingUpdate = true; trigger.Close(); Refresh(); }
         try
         {
             var update = await Updates.Check(CancellationToken.None);
@@ -214,6 +236,7 @@ internal sealed class TrayApp : IDisposable
         }
         catch (OperationCanceledException) { }
         catch (Exception e) { Settings.Log("Update: " + e); if (interactive) MessageBox.Show("업데이트를 확인하거나 설치하지 못했어요.\n" + e.Message, "Morphy"); }
+        finally { if (interactive) { checkingUpdate = false; Refresh(); } }
     }
     public void Dispose() { control.Dispose(); trigger.Dispose(); guide?.Close(); tray.Visible = false; tray.ContextMenuStrip?.Dispose(); tray.Icon?.Dispose(); tray.Dispose(); }
 }

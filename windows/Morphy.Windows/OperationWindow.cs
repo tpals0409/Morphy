@@ -14,10 +14,11 @@ internal sealed class OperationWindow : Window
     {
         Title = title; Width = 400; SizeToContent = SizeToContent.Height; ResizeMode = ResizeMode.NoResize; WindowStartupLocation = WindowStartupLocation.CenterScreen;
         label.Text = title;
-        var panel = new StackPanel { Margin = new Thickness(28) }; panel.Children.Add(label); panel.Children.Add(bar);
+        var panel = new StackPanel { Margin = new Thickness(28) }; panel.Children.Add(Brand.LogoView()); panel.Children.Add(label); panel.Children.Add(bar);
         var button = new Button { Content = "취소", Margin = new Thickness(0, 20, 0, 0), Padding = new Thickness(14, 6, 14, 6), HorizontalAlignment = HorizontalAlignment.Right };
         button.Click += (_, _) => { cancellation.Cancel(); button.IsEnabled = false; label.Text = "취소하는 중…"; };
         panel.Children.Add(button); Content = panel;
+        Brand.Apply(this);
         Closing += (_, e) => { if (!finished) { cancellation.Cancel(); e.Cancel = true; label.Text = "취소하는 중…"; } };
     }
     internal void Update(string stage, double fraction) { label.Text = $"{stage} · {fraction:P0}"; bar.Value = fraction * 100; }

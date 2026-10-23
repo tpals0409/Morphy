@@ -21,7 +21,7 @@ internal sealed class RadialMenu : Window
         WindowStyle = WindowStyle.None; AllowsTransparency = true; Background = Brushes.Transparent;
         ShowInTaskbar = false; ShowActivated = false; Topmost = true; ResizeMode = ResizeMode.NoResize;
         Width = Height = 300;
-        ring = new Ring(System.IO.Path.GetFileName(path), outputs); Content = ring;
+        ring = new Ring(path, outputs); Content = ring;
         ring.Invoked = slot => { ring.Selected = slot; moved = true; ExecuteSelection(); };
         ring.EngineMissing = Conversion.OfficeRoutes.ContainsKey(Conversion.Extension(path)) && EngineInstaller.Find() == null;
         Native.GetCursorPos(out origin);
@@ -99,9 +99,15 @@ internal sealed class RadialMenu : Window
         internal bool EngineMissing;
         internal Action<int>? Invoked;
         private readonly bool light;
+        private readonly ImageSource? fileIcon;
         internal Ring(string file, OutputFormat[] formats, bool? lightOverride = null)
         {
-            this.file = file; this.formats = formats; Items = MainRing(formats);
+            this.file = System.IO.Path.GetFileName(file); this.formats = formats; Items = MainRing(formats);
+            if (System.IO.File.Exists(file))
+            {
+                using var icon = System.Drawing.Icon.ExtractAssociatedIcon(file);
+                if (icon != null) fileIcon = Imaging.CreateBitmapSourceFromHIcon(icon.Handle, Int32Rect.Empty, System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions());
+            }
             using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
             light = lightOverride ?? (key?.GetValue("AppsUseLightTheme") is not int value || value != 0);
             AutomationProperties.SetName(this, file + " 변환 형식"); RebuildButtons();
@@ -137,34 +143,45 @@ internal sealed class RadialMenu : Window
         }
         protected override void OnRender(DrawingContext dc)
         {
+            var plate = new CombinedGeometry(GeometryCombineMode.Exclude,
+                new EllipseGeometry(new Point(150, 150), 135, 135), new EllipseGeometry(new Point(150, 150), 53, 53));
+            dc.DrawGeometry(Brand.Plate(light), new Pen(Brand.Faint(light), 1), plate);
             for (int i = 0; i < 6; i++)
             {
-                double a = (i * 60 - 118) * Math.PI / 180, b = (i * 60 - 62) * Math.PI / 180;
+                // Same inset geometry and round join as the Mac ring: 6pt gaps,
+                // 58/130 radii, 7pt corners. Insetting before stroking keeps gaps even.
+                double mid = (i * 60 - 90) * Math.PI / 180, edge = Math.PI / 6;
+                double outer = 123, inner = 65, dOut = Math.Asin(10 / outer), dIn = Math.Asin(10 / inner);
                 Point At(double r, double theta) => new(150 + r * Math.Cos(theta), 150 + r * Math.Sin(theta));
                 var shape = new StreamGeometry();
                 using (var context = shape.Open())
                 {
-                    context.BeginFigure(At(58, a), true, true);
-                    context.LineTo(At(135, a), true, false);
-                    context.ArcTo(At(135, b), new Size(135, 135), 0, false, SweepDirection.Clockwise, true, false);
-                    context.LineTo(At(58, b), true, false);
-                    context.ArcTo(At(58, a), new Size(58, 58), 0, false, SweepDirection.Counterclockwise, true, false);
+                    context.BeginFigure(At(outer, mid - edge + dOut), true, true);
+                    context.ArcTo(At(outer, mid + edge - dOut), new Size(outer, outer), 0, false, SweepDirection.Clockwise, true, false);
+                    context.LineTo(At(inner, mid + edge - dIn), true, false);
+                    context.ArcTo(At(inner, mid - edge + dIn), new Size(inner, inner), 0, false, SweepDirection.Counterclockwise, true, false);
                 }
-                var baseColor = SystemParameters.HighContrast ? SystemColors.WindowColor : light ? Color.FromArgb(247, 248, 248, 252) : Color.FromArgb(247, 34, 38, 48);
-                var fill = new SolidColorBrush(Items[i] == null ? (light ? Color.FromArgb(180, 220, 222, 230) : Color.FromArgb(150, 34, 38, 48)) : i == Selected ? (SystemParameters.HighContrast ? SystemColors.HighlightColor : Color.FromRgb(101, 80, 230)) : baseColor);
-                dc.DrawGeometry(fill, new Pen(new SolidColorBrush(Color.FromArgb(70, 220, 220, 255)), 1), shape);
+                var fill = Items[i] == null ? Brand.Faint(light) : i == Selected ? Brand.Selected : Brand.Tint(light);
+                dc.DrawGeometry(fill, new Pen(fill, 14) { LineJoin = PenLineJoin.Round }, shape);
                 if (Items[i] != null)
                 {
                     string label = Items[i] is OutputFormat f ? f.Name : (string)Items[i]!;
-                    var text = Text(label, 14, SystemParameters.HighContrast ? (i == Selected ? SystemColors.HighlightTextBrush : SystemColors.WindowTextBrush) : i == Selected || !light ? Brushes.White : Brushes.Black);
-                    var center = At(96, (a + b) / 2); dc.DrawText(text, new Point(center.X - text.Width / 2, center.Y - text.Height / 2));
-                    if (EngineMissing && Items[i] is OutputFormat format && format.Extension != "html") { var hint = Text("엔진 필요", 9, i == Selected || !light ? Brushes.LightGray : Brushes.DimGray); dc.DrawText(hint, new Point(center.X - hint.Width / 2, center.Y + 10)); }
+                    var ink = i == Selected ? Brand.SelectedInk : Brand.Ink(light);
+                    var text = Text(label, Items[i] is OutputFormat ? 18 : 13, ink); text.SetFontWeight(FontWeights.Bold);
+                    var center = At(94, mid); dc.DrawText(text, new Point(center.X - text.Width / 2, center.Y - text.Height / 2));
+                    if (EngineMissing && Items[i] is OutputFormat format && format.Extension != "html") { var hint = Text("기능 추가 필요", 8, ink); dc.DrawText(hint, new Point(center.X - hint.Width / 2, center.Y + 10)); }
                 }
             }
-            dc.DrawEllipse(new SolidColorBrush(light ? Color.FromArgb(245, 255, 255, 255) : Color.FromArgb(235, 24, 26, 34)), null, new Point(150, 150), 53, 53);
-            string name = file.Length > 12 ? file[..10] + "…" : file;
-            var title = Text("Morphy", 15, light ? Brushes.Black : Brushes.White); dc.DrawText(title, new Point(150 - title.Width / 2, 129));
-            var subtitle = Text(name, 10, light ? Brushes.DimGray : Brushes.LightGray); dc.DrawText(subtitle, new Point(150 - subtitle.Width / 2, 154));
+            // Keep the middle transparent, like macOS; show the selected file, not a brand card.
+            var inkCenter = Brand.Ink(light);
+            if (more) { var title = Text("더 보기", 10, inkCenter); dc.DrawText(title, new Point(150 - title.Width / 2, 144)); return; }
+            if (fileIcon != null) dc.DrawImage(fileIcon, new Rect(139, 123, 22, 22));
+            else dc.DrawRoundedRectangle(Brushes.WhiteSmoke, new Pen(Brushes.Gray, 1), new Rect(143, 123, 14, 20), 1, 1);
+            string name = System.IO.Path.GetFileNameWithoutExtension(file);
+            if (name.Length > 9) name = name[..4] + "…" + name[^4..];
+            var titleFile = Text(name, 9, inkCenter); dc.DrawText(titleFile, new Point(150 - titleFile.Width / 2, 148));
+            var subtitle = Text(System.IO.Path.GetExtension(file).TrimStart('.').ToUpperInvariant(), 9, inkCenter); subtitle.SetFontWeight(FontWeights.Bold);
+            dc.DrawText(subtitle, new Point(150 - subtitle.Width / 2, 161));
         }
         private FormattedText Text(string text, double size, Brush brush) => new(text, System.Globalization.CultureInfo.CurrentUICulture, FlowDirection.LeftToRight, new Typeface("Malgun Gothic"), size, brush, VisualTreeHelper.GetDpi(this).PixelsPerDip);
     }

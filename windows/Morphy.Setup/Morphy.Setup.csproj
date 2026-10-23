@@ -5,9 +5,12 @@
     <SelfContained>true</SelfContained><PublishSingleFile>true</PublishSingleFile><IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <AssemblyName>MorphySetup</AssemblyName><Version>0.1.0</Version>
     <ApplicationManifest>..\Morphy.Windows\app.manifest</ApplicationManifest>
+    <ApplicationIcon>..\Assets\Morphy.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\Shared\Bundle.cs" Link="Bundle.cs" />
+    <Compile Include="..\Shared\Brand.cs" Link="Brand.cs" />
+    <EmbeddedResource Include="..\Assets\Morphy.png" LogicalName="Morphy.Brand.png" />
     <EmbeddedResource Include="..\..\build\windows-release\payload.zip" LogicalName="payload.zip" />
   </ItemGroup>
 </Project>
