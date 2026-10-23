@@ -72,6 +72,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let installer = EngineInstaller.shared
     private var radial: RadialMenu?
     private var snapshot: Result<[URL], Error>?  // Finder selection taken at Option-down (PRD 5.5)
+    private var update: AppUpdate?   // a newer release found on the website (DECISIONS.md D9)
+    private var updating = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         status.button?.image = Self.menuBarIcon
@@ -90,6 +92,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             snapshot = Result { try Finder.selection() }
         }
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert]) { _, _ in }
+        checkForUpdate()
+        Timer.scheduledTimer(withTimeInterval: 6 * 3600, repeats: true) { [weak self] _ in self?.checkForUpdate() }
 
         let prompt = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
         let trusted = AXIsProcessTrustedWithOptions(prompt)
@@ -189,11 +193,52 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         a.runModal()
     }
 
+    // MARK: Updates
+
+    /// Quiet unless `manual`: a found update only shows up as the menu's update item.
+    private func checkForUpdate(manual: Bool = false) {
+        Task { @MainActor in
+            do {
+                update = try await Updater.check()
+                guard manual else { return }
+                if let update { installUpdate(update) } else { alert("최신 버전이에요", "Morphy \(Updater.current)을(를) 쓰고 있어요.") }
+            } catch {
+                log.error("update check: \(error.localizedDescription, privacy: .public)")
+                if manual { alert((error as? MorphyError)?.message ?? "업데이트를 확인할 수 없어요. 인터넷 연결을 확인해 주세요.") }
+            }
+        }
+    }
+
+    private func installUpdate(_ update: AppUpdate) {
+        guard !queue.isRunning, installer.state == .idle else { return alert("변환이 끝난 뒤에 업데이트할 수 있어요.") }
+        NSApp.activate()
+        let a = NSAlert()
+        a.messageText = "Morphy \(update.version)(으)로 업데이트할까요?"
+        a.informativeText = "지금 버전은 \(Updater.current)이에요. 내려받아 확인한 뒤 Morphy를 다시 시작해요."
+        a.addButton(withTitle: "업데이트")
+        a.addButton(withTitle: "나중에")
+        guard a.runModal() == .alertFirstButtonReturn else { return }
+        updating = true
+        refreshTitle()
+        Task { @MainActor in
+            do {
+                try await Updater.install(update)
+                Updater.relaunch()
+            } catch {
+                updating = false
+                refreshTitle()
+                let e = error as? MorphyError
+                alert(e?.message ?? "업데이트를 내려받지 못했어요. 인터넷 연결을 확인해 주세요.", e?.detail ?? "")
+            }
+        }
+    }
+
     // MARK: Status menu
 
     private func refreshTitle() {
         let done = queue.jobs.filter { if case .waiting = $0.state { false } else if case .running = $0.state { false } else { true } }.count
         let failed = queue.jobs.filter(\.failed).count
+        if updating { status.button?.title = " ⬆︎업데이트 중"; return }
         switch installer.state {
         case .downloading(let received): status.button?.title = " ⬇︎\(received * 100 / Int64(LibreOffice.bytes))%"
         case .installing: status.button?.title = " ⬇︎설치 중"
@@ -248,6 +293,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         login.state = SMAppService.mainApp.status == .enabled ? .on : .off
         menu.addItem(login)
         menu.addItem(.separator())
+        if updating {
+            menu.addItem(NSMenuItem(title: "업데이트 설치 중…", action: nil, keyEquivalent: ""))
+        } else if let update {
+            menu.addItem(ActionItem("업데이트 설치 (\(Updater.current) → \(update.version))…") { [weak self] in self?.installUpdate(update) })
+        } else {
+            menu.addItem(ActionItem("업데이트 확인 · 현재 \(Updater.current)") { [weak self] in self?.checkForUpdate(manual: true) })
+        }
         menu.addItem(ActionItem("Morphy 종료") { NSApp.terminate(nil) })
     }
 
