@@ -31,14 +31,6 @@ final class JobQueue {
         onChange()
     }
 
-    /// Only failed items run again; finished results are never regenerated (F10).
-    func retryFailed() {
-        for i in jobs.indices { if case .failed = jobs[i].state { jobs[i].state = .waiting } }
-        pump()
-    }
-
-    func clear() { if !isRunning { jobs = []; onChange() } }
-
     private func pump() {
         guard !isRunning else { return }
         guard let i = jobs.firstIndex(where: \.isWaiting) else { return }
@@ -246,46 +238,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
+    /// Same five entries as the Windows tray menu (DECISIONS.md D10): version, guide, update, login item, quit.
+    /// Above them only what needs attention right now: a missing permission, a running conversion or engine download.
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
         if !AXIsProcessTrusted() {
             menu.addItem(ActionItem("손쉬운 사용 권한이 필요해요 — 설정 열기") {
                 NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
             })
-            menu.addItem(.separator())
         }
-        for job in queue.jobs { menu.addItem(Self.item(for: job)) }
-        if queue.isRunning { menu.addItem(ActionItem("모두 취소") { [queue] in queue.cancelAll() }) }
-        if queue.jobs.contains(where: \.failed) { menu.addItem(ActionItem("실패한 항목 다시 시도") { [queue] in queue.retryFailed() }) }
-        if !queue.jobs.isEmpty && !queue.isRunning { menu.addItem(ActionItem("목록 지우기") { [queue] in queue.clear() }) }
-        if !queue.jobs.isEmpty { menu.addItem(.separator()) }
-
-        switch installer.state {
-        case .downloading(let received):
-            let mb = { (b: Int64) in b / 1_000_000 }
-            menu.addItem(NSMenuItem(title: "문서 변환 기능 내려받는 중 · \(mb(received))/\(mb(Int64(LibreOffice.bytes)))MB", action: nil, keyEquivalent: ""))
-            menu.addItem(ActionItem("내려받기 취소") { [installer] in installer.cancel() })
-        case .installing:
+        if queue.isRunning {
+            let done = queue.jobs.filter { !$0.isWaiting }.count
+            menu.addItem(ActionItem("변환 중 \(done)/\(queue.jobs.count) — 취소") { [queue] in queue.cancelAll() })
+        }
+        if case .downloading(let received) = installer.state {
+            menu.addItem(ActionItem("문서 변환 기능 내려받는 중 \(received * 100 / Int64(LibreOffice.bytes))% — 취소") { [installer] in installer.cancel() })
+        } else if installer.state == .installing {
             menu.addItem(NSMenuItem(title: "문서 변환 기능을 확인하고 추가하는 중…", action: nil, keyEquivalent: ""))
-        case .idle:
-            if let app = LibreOffice.app {
-                let own = app == LibreOffice.managed
-                let v = Bundle(url: app)?.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
-                menu.addItem(NSMenuItem(title: own ? "문서 변환 기능 켜짐" : "문서 변환: 설치된 LibreOffice \(v) 사용 중", action: nil, keyEquivalent: ""))
-            } else {
-                menu.addItem(ActionItem("문서 변환 기능 추가…") { [weak self] in self?.installEngine() })
-            }
-            // Offered whenever Morphy's own copy exists, even unused (e.g. LibreOffice was installed in /Applications later).
-            if FileManager.default.fileExists(atPath: LibreOffice.managed.path) {
-                let unused = LibreOffice.app != LibreOffice.managed
-                menu.addItem(ActionItem("문서 변환 기능 삭제…\(unused ? " (사용 안 함)" : "")") { [weak self] in self?.removeEngine() })
-            }
+        }
+        if menu.numberOfItems > 0 { menu.addItem(.separator()) }
+
+        menu.addItem(NSMenuItem(title: "Morphy \(Updater.current)", action: nil, keyEquivalent: ""))
+        menu.addItem(ActionItem("사용 방법") { [weak self] in self?.showGuide() })
+        if updating {
+            menu.addItem(NSMenuItem(title: "업데이트 설치 중…", action: nil, keyEquivalent: ""))
+        } else if let update {
+            menu.addItem(ActionItem("업데이트 설치 (\(Updater.current) → \(update.version))…") { [weak self] in self?.installUpdate(update) })
+        } else {
+            menu.addItem(ActionItem("업데이트 확인…") { [weak self] in self?.checkForUpdate(manual: true) })
         }
         menu.addItem(.separator())
-
-        let hold = ActionItem("Option(⌥)을 꾹 눌러 메뉴 열기") { [trigger] in trigger.enabled.toggle() }
-        hold.state = trigger.enabled ? .on : .off
-        menu.addItem(hold)
         let login = ActionItem("로그인 시 실행") {
             let s = SMAppService.mainApp
             try? s.status == .enabled ? s.unregister() : s.register()
@@ -293,31 +275,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         login.state = SMAppService.mainApp.status == .enabled ? .on : .off
         menu.addItem(login)
         menu.addItem(.separator())
-        if updating {
-            menu.addItem(NSMenuItem(title: "업데이트 설치 중…", action: nil, keyEquivalent: ""))
-        } else if let update {
-            menu.addItem(ActionItem("업데이트 설치 (\(Updater.current) → \(update.version))…") { [weak self] in self?.installUpdate(update) })
-        } else {
-            menu.addItem(ActionItem("업데이트 확인 · 현재 \(Updater.current)") { [weak self] in self?.checkForUpdate(manual: true) })
-        }
         menu.addItem(ActionItem("Morphy 종료") { NSApp.terminate(nil) })
     }
 
-    private static func item(for job: Job) -> NSMenuItem {
-        let name = "\(job.source.lastPathComponent) → \(job.format.rawValue)"
-        switch job.state {
-        case .waiting: return NSMenuItem(title: "대기 · \(name)", action: nil, keyEquivalent: "")
-        case .running: return NSMenuItem(title: "변환 중 · \(name)", action: nil, keyEquivalent: "")
-        case .cancelled: return NSMenuItem(title: "취소됨 · \(name)", action: nil, keyEquivalent: "")
-        case .failed(let why): return NSMenuItem(title: "✕ \(name) — \(why)", action: nil, keyEquivalent: "")
-        case .done(let urls):
-            let more = urls.count > 1 ? " 외 \(urls.count - 1)개" : ""
-            let item = NSMenuItem(title: "✓ \(urls[0].lastPathComponent)\(more)", action: nil, keyEquivalent: "")
-            item.submenu = NSMenu()
-            item.submenu?.addItem(ActionItem("열기") { urls.forEach { NSWorkspace.shared.open($0) } })
-            item.submenu?.addItem(ActionItem("Finder에서 보기") { NSWorkspace.shared.activateFileViewerSelecting(urls) })
-            return item
-        }
+    /// The Windows guide's wording with the Mac key. Removing the document engine lives here now that the menu is short.
+    private func showGuide() {
+        NSApp.activate()
+        let a = NSAlert()
+        a.messageText = "파일 변환, 손끝에서."
+        a.informativeText = """
+            1   Finder에서 파일 하나를 선택하세요.
+            2   Option(⌥)을 누른 채 원하는 형식으로 이동하세요.
+            3   Option에서 손을 떼면 변환돼요.
+
+            가운데나 바깥에서 놓으면 취소돼요. Esc로도 취소할 수 있어요.
+            클릭으로도 실행할 수 있어요.
+            원본은 그대로, 결과는 같은 폴더에 저장돼요.
+
+            Word·Excel·PowerPoint는 처음 변환할 때 문서 변환 기능(약 300MB)을 한 번 추가해요.
+            파일은 외부로 보내지 않아요.
+            """
+        a.addButton(withTitle: "확인")
+        let hasEngine = FileManager.default.fileExists(atPath: LibreOffice.managed.path)
+        if hasEngine { a.addButton(withTitle: "문서 변환 기능 삭제…") }
+        if a.runModal() == .alertSecondButtonReturn, hasEngine { removeEngine() }
     }
 
     /// Moves Morphy's copy to the Trash (recoverable), after asking.

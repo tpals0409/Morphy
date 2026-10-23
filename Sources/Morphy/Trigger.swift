@@ -12,10 +12,6 @@ final class OptionTrigger {
     var onTrigger: () -> Void = {}
     /// Called on Option-down, so slow work (reading Finder's selection) overlaps the hold instead of following it.
     var onArm: () -> Void = {}
-    var enabled: Bool {
-        get { !UserDefaults.standard.bool(forKey: "triggerDisabled") }
-        set { UserDefaults.standard.set(!newValue, forKey: "triggerDisabled") }
-    }
 
     // ponytail: fixed hold time and mouse slop; expose in settings once beta users weigh in.
     private let holdDelay = 0.15  // logged real taps/combos released or interrupted the key within this (D2)
@@ -54,7 +50,6 @@ final class OptionTrigger {
         let optionKey = event.keyCode == 58 || event.keyCode == 61  // left, right Option
         if flags == .option && optionKey {
             guard pending == nil else { return }
-            guard enabled else { return log.info("not opened: Option trigger disabled") }
             guard Finder.isFrontmost else {
                 return log.info("not opened: frontmost is \(NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "?", privacy: .public)")
             }
