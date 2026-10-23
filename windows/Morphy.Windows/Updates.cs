@@ -53,6 +53,11 @@ internal static class Updates
     }
     internal static void Install(string setup)
     {
-        Process.Start(new ProcessStartInfo(setup, "--update") { UseShellExecute = false, CreateNoWindow = true });
+        Process.Start(new ProcessStartInfo(setup, "--update")
+        {
+            UseShellExecute = false, CreateNoWindow = true,
+            // The installer renames the app directory. Its working directory must not lock it.
+            WorkingDirectory = Path.GetTempPath()
+        });
     }
 }
