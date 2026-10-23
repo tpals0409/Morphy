@@ -207,6 +207,27 @@ html:not(.phone) .phone-only { display: none !important; }
 .faq details[open] summary::after { rotate: 45deg; }
 .faq details p { padding: 0 0 20px; font-size: 14px; line-height: 1.7; color: #4a4740; max-width: 720px; }
 .foot-links a { text-decoration: underline; }
+
+/* 문의하기 */
+.contact .sec-head .note { text-align: right; max-width: 320px; }
+.contact .sec-head .note a { text-decoration: underline; }
+.contact-form { display: grid; gap: 20px; max-width: 720px; }
+.kinds { border: 0; display: flex; flex-wrap: wrap; gap: 10px; }
+.kinds legend { font-size: 13px; font-weight: 700; margin-bottom: 10px; }
+.kinds label { position: relative; cursor: pointer; }
+.kinds input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+.kinds span { display: inline-block; padding: 10px 18px; border-radius: 999px; border: 1.5px solid var(--ink); font-size: 14px; font-weight: 700; }
+.kinds input:checked + span { background: var(--ink); color: #fff; }
+.kinds input:focus-visible + span { outline: 3px solid var(--orange); outline-offset: 2px; }
+.field { display: grid; gap: 8px; font-size: 13px; font-weight: 700; }
+.field small { font-weight: 500; color: var(--mute); }
+.field textarea, .field input { font: inherit; font-size: 15px; font-weight: 400; padding: 14px 16px; border: 1.5px solid var(--line); border-radius: 12px; background: #fff; color: var(--ink); resize: vertical; }
+.field textarea:focus-visible, .field input:focus-visible { outline: none; border-color: var(--ink); }
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.send { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.send .btn[disabled] { opacity: .5; cursor: wait; }
+.status a { text-decoration: underline; }
+.status.err { color: #b3261e; }
 .cta-ring { position: absolute; right: -70px; top: 50%; translate: 0 -50%; width: 240px; height: 240px; -webkit-mask: conic-gradient(#000 var(--sweep), transparent 0); mask: conic-gradient(#000 var(--sweep), transparent 0); }
 .cta-ring i { position: absolute; inset: 0; border-radius: 50%; background: var(--cream); -webkit-mask: radial-gradient(circle, transparent 40%, #000 40.5%); mask: radial-gradient(circle, transparent 40%, #000 40.5%); }
 
@@ -332,6 +353,8 @@ html:not(.phone) .phone-only { display: none !important; }
   .steps-list { grid-template-columns: 1fr; }
   .install .sec-head .note { text-align: left; }
   .faq summary { font-size: 16px; }
+  .contact .sec-head .note { text-align: left; }
+  .nav .wide { display: none; }
   .cta-ring { width: 180px; height: 180px; right: -60px; top: auto; bottom: -50px; translate: 0 0; }
 }
 </style>
@@ -346,7 +369,7 @@ html:not(.phone) .phone-only { display: none !important; }
 
 <header class="wrap nav">
   <a class="logo" href="#"><img src="icon.png" alt="">Morphy</a>
-  <nav><a href="#how">사용법</a><a href="#formats">지원 형식</a><a href="#install">설치</a><a href="#faq">FAQ</a></nav>
+  <nav><a href="#how">사용법</a><a class="wide" href="#formats">지원 형식</a><a href="#install">설치</a><a href="#faq">FAQ</a><a href="#contact">문의</a></nav>
 </header>
 
 <section class="hero">
@@ -521,6 +544,32 @@ html:not(.phone) .phone-only { display: none !important; }
   <details class="r" style="--d:.375s"><summary>업데이트는 어떻게 하나요?</summary><p>새 버전이 나오면 Morphy 메뉴에 업데이트 항목이 나타나요. Mac은 메뉴 막대, Windows는 알림 영역의 Morphy 아이콘을 누르면 돼요. 0.1.0을 쓰고 있다면 이 페이지에서 새로 받아 주세요.</p></details>
 </section>
 
+<section id="contact" class="sec contact wrap" data-in>
+  <div class="sec-head">
+    <h2 class="r">문의하기</h2>
+    <p class="note r" style="--d:.125s">버그, 기능 제안, 궁금한 점을 남겨 주세요.<br>내용은 <a href="https://github.com/tpals0409/Morphy/issues">GitHub 이슈</a>로 공개되니 개인정보는 적지 말아 주세요.</p>
+  </div>
+  <form class="contact-form r" style="--d:.25s" novalidate>
+    <fieldset class="kinds">
+      <legend>종류</legend>
+      <label><input type="radio" name="kind" value="bug" checked><span>버그 신고</span></label>
+      <label><input type="radio" name="kind" value="idea"><span>기능 제안</span></label>
+      <label><input type="radio" name="kind" value="question"><span>질문</span></label>
+    </fieldset>
+    <label class="field">내용
+      <textarea name="message" rows="6" minlength="10" maxlength="4000" required placeholder="어떤 파일을 어떤 형식으로 바꿀 때 무슨 일이 있었는지 적어 주세요."></textarea>
+    </label>
+    <label class="field">답장 받을 이메일 <small>선택 · 공개되지 않고 답장할 때만 써요</small>
+      <input type="email" name="email" maxlength="200" autocomplete="email" placeholder="name@example.com">
+    </label>
+    <label class="hp" aria-hidden="true">비워 두세요<input name="website" tabindex="-1" autocomplete="off"></label>
+    <div class="send">
+      <button class="btn btn-dark" type="submit">보내기</button>
+      <p class="note status" role="status" aria-live="polite"></p>
+    </div>
+  </form>
+</section>
+
 <section class="cta" data-in>
   <div class="cta-ring" aria-hidden="true"><i></i></div>
   <div class="wrap">
@@ -559,6 +608,24 @@ html:not(.phone) .phone-only { display: none !important; }
     document.getElementById('rel-win-ver').textContent = 'v' + r.version + ' · ' + (r.bytes / 1048576).toFixed(0) + 'MB';
     document.getElementById('rel-win-sha').textContent = 'SHA-256 ' + r.sha256;
   }).catch(() => {});
+  // 문의하기: /api/feedback이 GitHub 이슈를 만들어요. 이메일은 이슈에 넣지 않아요.
+  const form = document.querySelector('.contact-form');
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    const status = form.querySelector('.status'), button = form.querySelector('button');
+    const show = (text, err) => { status.textContent = text; status.classList.toggle('err', !!err); };
+    const data = Object.fromEntries(new FormData(form));
+    if ((data.message || '').trim().length < 10) return show('내용을 10자 이상 적어 주세요.', true);
+    button.disabled = true; show('보내는 중…');
+    try {
+      const r = await fetch('/api/feedback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.ok) return show(j.error || '보내지 못했어요. 잠시 후 다시 시도해 주세요.', true);
+      form.reset(); show('접수됐어요. ');
+      if (j.url) { const a = document.createElement('a'); a.href = j.url; a.textContent = 'GitHub 이슈 #' + j.number; status.append(a, '에서 진행 상황을 볼 수 있어요.'); }
+    } catch { show('보내지 못했어요. 인터넷 연결을 확인해 주세요.', true); }
+    finally { button.disabled = false; }
+  });
   // 설치 방법의 '다른 OS 보기': 페이지 전체의 OS 표시를 바꿔요.
   document.querySelector('.os-switch').addEventListener('click', () => document.documentElement.classList.toggle('win'));
   const io = new IntersectionObserver(es => es.forEach(e => {

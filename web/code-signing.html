@@ -26,6 +26,7 @@ body{max-width:760px;margin:48px auto;padding:0 24px;background:#fff7ed;color:#3
 <p>File conversion takes place locally. Morphy does not upload source documents or conversion results, and it does not send product analytics or conversion history.</p>
 <p>Morphy contacts its release server to check for updates, including an automatic check when the app starts. Installing or updating the app downloads release files. Windows setup automatically downloads required document-conversion components from their official distribution servers when they are not already available; on macOS, those components are downloaded when the user enables document conversion.</p>
 <p>These network requests expose normal connection information, such as the client's IP address and HTTP request headers, to the hosting providers. They do not include the contents of files selected for conversion. The project website is hosted on Cloudflare and also makes requests for release information.</p>
+<p>The contact form on the website creates a public issue in the GitHub repository with the message, the chosen category and the visitor's operating system. An optional reply email is not included in the issue; it is stored privately in Cloudflare D1 and used only to reply to that message.</p>
 <p>Local settings and diagnostic logs are stored on the device. A user may choose to share diagnostic information when reporting an issue.</p>
 </section>
 </main>
