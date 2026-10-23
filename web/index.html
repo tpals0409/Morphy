@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Morphy · 변환 때문에 흐름이 끊기지 않도록</title>
 <meta name="description" content="Finder나 탐색기에서 파일을 고르고 단축키를 꾹 누르면 커서 옆 도넛 메뉴에서 바로 변환해요. 업로드 없이, 내 컴퓨터 안에서.">
-<script>/* 단축키 안내를 방문자 OS에 맞춰요: Windows는 Ctrl+Alt, 그 밖은 Mac의 Option. */ if (/Windows/i.test((navigator.userAgentData && navigator.userAgentData.platform) || navigator.userAgent)) document.documentElement.classList.add('win');</script>
+<script>/* 방문자 OS에 맞춰요: Windows는 Ctrl+Alt·Windows 버튼 먼저, 그 밖은 Mac. 휴대폰이면 설치할 수 없다고 알려요. */ (() => { const ua = navigator.userAgent, c = document.documentElement.classList; if (/Windows/i.test((navigator.userAgentData && navigator.userAgentData.platform) || ua)) c.add('win'); if (/iPhone|iPad|Android/i.test(ua)) c.add('phone'); })();</script>
 <meta property="og:title" content="Morphy">
 <meta property="og:description" content="파일 고르고, 꾹 누르고, 놓으면 끝. 하던 일은 계속. 변환은 Morphy.">
 <meta property="og:image" content="icon.png">
@@ -180,7 +180,32 @@ html.win .titlebar { background: #f3f3f3; }
 .cta .act { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .cta small { display: block; font-size: 12px; font-weight: 600; line-height: 1.6; }
 .cta small a { text-decoration: underline; }
-.win-note { margin-top: 12px; }
+/* 방문자 OS의 다운로드 버튼을 앞에, 진하게 */
+html.win .dl-win { order: -1; background: var(--ink); color: #fff; }
+html.win .dl-mac { background: transparent; color: var(--ink); }
+.req { margin-top: 14px; }
+.req a, .faq a, .steps-list a { text-decoration: underline; }
+html:not(.phone) .phone-only { display: none !important; }
+.phone-only { margin-top: 10px; color: var(--ink); font-weight: 600; }
+
+/* 설치 방법 */
+.install .sec-head .note { text-align: right; max-width: 300px; }
+.os-switch { margin-top: 6px; background: none; border: 0; padding: 0; font: inherit; font-weight: 600; color: var(--ink); text-decoration: underline; cursor: pointer; }
+.steps-list { list-style: none; counter-reset: step; display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.steps-list li { counter-increment: step; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+.steps-list li::before { content: counter(step, decimal-leading-zero); display: block; font-family: Anton, Impact, sans-serif; font-size: 28px; line-height: 1; color: var(--orange); margin-bottom: 12px; }
+.steps-list b { font-size: 16px; font-weight: 800; letter-spacing: -.02em; }
+.steps-list p { margin-top: 6px; font-size: 13px; line-height: 1.6; color: var(--mute); }
+
+/* 자주 묻는 질문 */
+.faq details { border-top: 1px solid var(--line); }
+.faq details:last-of-type { border-bottom: 1px solid var(--line); }
+.faq summary { list-style: none; cursor: pointer; padding: 18px 0; font-size: 17px; font-weight: 700; display: flex; justify-content: space-between; gap: 16px; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: "+"; color: var(--orange); font-size: 24px; line-height: 1; transition: rotate var(--beat) var(--spring); }
+.faq details[open] summary::after { rotate: 45deg; }
+.faq details p { padding: 0 0 20px; font-size: 14px; line-height: 1.7; color: #4a4740; max-width: 720px; }
+.foot-links a { text-decoration: underline; }
 .cta-ring { position: absolute; right: -70px; top: 50%; translate: 0 -50%; width: 240px; height: 240px; -webkit-mask: conic-gradient(#000 var(--sweep), transparent 0); mask: conic-gradient(#000 var(--sweep), transparent 0); }
 .cta-ring i { position: absolute; inset: 0; border-radius: 50%; background: var(--cream); -webkit-mask: radial-gradient(circle, transparent 40%, #000 40.5%); mask: radial-gradient(circle, transparent 40%, #000 40.5%); }
 
@@ -303,6 +328,9 @@ html.win .titlebar { background: #f3f3f3; }
   .rel { text-align: left; }
   .cta .wrap { grid-template-columns: 1fr; gap: 28px; }
   .cta .act { text-align: left; align-items: flex-start; }
+  .steps-list { grid-template-columns: 1fr; }
+  .install .sec-head .note { text-align: left; }
+  .faq summary { font-size: 16px; }
   .cta-ring { width: 180px; height: 180px; right: -60px; top: auto; bottom: -50px; translate: 0 0; }
 }
 </style>
@@ -317,21 +345,22 @@ html.win .titlebar { background: #f3f3f3; }
 
 <header class="wrap nav">
   <a class="logo" href="#"><img src="icon.png" alt="">Morphy</a>
-  <nav><a href="#how">사용법</a><a href="#formats">지원 형식</a></nav>
+  <nav><a href="#how">사용법</a><a href="#formats">지원 형식</a><a href="#install">설치</a><a href="#faq">FAQ</a></nav>
 </header>
 
 <section class="hero">
   <div class="wrap">
     <div>
-      <p class="eyebrow r">SMALL APP. BIG SHORTCUT.</p>
+      <p class="eyebrow r">MAC · WINDOWS 파일 변환 앱</p>
       <h1><span class="line"><span>변환 때문에</span></span><span class="line"><span class="orange" style="--d:.125s">흐름이 끊기지 않도록</span></span></h1>
-      <p class="lede r" style="--d:.25s">파일 고르고, 꾹 누르고, 놓으면 끝.<br>하던 일은 계속. 변환은 Morphy.</p>
+      <p class="lede r" style="--d:.25s"><span class="os-mac">Finder에서 파일을 고르고 Option(⌥)을 꾹.</span><span class="os-win">탐색기에서 파일을 고르고 Ctrl+Alt를 꾹.</span><br>커서 옆 메뉴에서 PDF·JPG·PNG·CSV로 바로 바꿔요.</p>
       <div class="actions r" style="--d:.375s">
-        <a class="btn btn-dark" href="/download">macOS 다운로드 ↗</a>
-        <span class="btn win-off">Windows 개발 중</span>
-        <a class="btn win-on" href="/download/windows" hidden>Windows 다운로드 ↗</a>
+        <a class="btn btn-dark dl-mac" href="/download">macOS 다운로드 ↗</a>
+        <span class="btn win-off">Windows 버전 개발 중</span>
+        <a class="btn dl-win win-on" href="/download/windows" hidden>Windows 다운로드 ↗</a>
       </div>
-      <p class="note win-note win-on" hidden>Windows 11 64비트 · <span class="win-ver">0.1.0</span> 베타 · 미서명이라 설치할 때 Windows 보안 경고가 뜰 수 있어요.</p>
+      <p class="note req r" style="--d:.5s"><span class="os-mac">macOS 14 이상 · Apple Silicon(M1 이후) 전용 · 무료</span><span class="os-win">Windows 11 64비트 · <span class="win-ver">0.1.8</span> 베타 · 무료</span> · <a href="#install">설치 방법</a></p>
+      <p class="note phone-only">휴대폰에서는 설치할 수 없어요. Mac이나 PC에서 이 페이지를 열어 주세요.</p>
     </div>
     <div class="art" aria-hidden="true">
       <div class="disc"></div>
@@ -369,8 +398,8 @@ html.win .titlebar { background: #f3f3f3; }
   </div>
 </section>
 
-<div class="marquee display" aria-label="Less click. More flow.">
-  <div class="track"><span>Less click. More flow.</span><span aria-hidden="true">Less click. More flow.</span><span aria-hidden="true">Less click. More flow.</span><span aria-hidden="true">Less click. More flow.</span><span aria-hidden="true">Less click. More flow.</span><span aria-hidden="true">Less click. More flow.</span></div>
+<div class="marquee display" aria-label="Fewer clicks. More flow.">
+  <div class="track"><span>Fewer clicks. More flow.</span><span aria-hidden="true">Fewer clicks. More flow.</span><span aria-hidden="true">Fewer clicks. More flow.</span><span aria-hidden="true">Fewer clicks. More flow.</span><span aria-hidden="true">Fewer clicks. More flow.</span><span aria-hidden="true">Fewer clicks. More flow.</span></div>
 </div>
 
 <section id="how" class="sec steps wrap" data-in>
@@ -419,7 +448,7 @@ html.win .titlebar { background: #f3f3f3; }
     <div class="arrow"><svg viewBox="0 0 56 24"><path d="M3 12h42"/><path d="M36 3l10 9-10 9"/></svg></div>
     <div class="pill dst"><b class="t1">CSV</b><b class="t2">XLSX</b></div>
     <h3 class="r" style="--d:1s">데이터 정리도</h3>
-    <p class="r" style="--d:1s">필요한 데이터만<br>바로 꺼내요.</p>
+    <p class="r" style="--d:1s">엑셀 표를<br>CSV로 바로 꺼내요.</p>
   </div>
 </section>
 
@@ -439,8 +468,8 @@ html.win .titlebar { background: #f3f3f3; }
     </div>
     <div class="cols">
       <div class="r" style="--d:.5s"><h3>업로드 없음</h3><p>파일이 외부로 전송되지 않아요.</p></div>
-      <div class="r" style="--d:.625s"><h3>원본 보존</h3><p>변환된 파일은 원본 옆에 저장돼요.</p></div>
-      <div class="r" style="--d:.75s"><h3>결과 검증</h3><p>변환 결과를 직접 확인할 수 있어요.</p></div>
+      <div class="r" style="--d:.625s"><h3>원본 보존</h3><p>원본은 그대로 두고, 결과는 새 파일로 저장해요.</p></div>
+      <div class="r" style="--d:.75s"><h3>결과 검증</h3><p>결과를 다시 열어 확인한 뒤에만 저장해요.</p></div>
     </div>
   </div>
 </section>
@@ -456,9 +485,39 @@ html.win .titlebar { background: #f3f3f3; }
   <div class="callout r" style="--d:.75s">
     <svg class="doc" viewBox="0 0 64 80"><path d="M4 4h36l20 20v52H4z" fill="none" stroke="#141414" stroke-width="3" stroke-linejoin="round"/><path d="M40 4v20h20" fill="none" stroke="#141414" stroke-width="3" stroke-linejoin="round"/><path d="M44 50v20M34 60h20" stroke="var(--orange)" stroke-width="4" stroke-linecap="round"/></svg>
     <strong><span class="os-mac">필요한 기능만 가볍게.</span><span class="os-win">설치 한 번이면 끝.</span></strong>
-    <p class="os-mac">이미지·PDF는 바로.<br>문서 변환 기능은 처음 한 번만 추가해요.<br>약 300MB</p>
-    <p class="os-win">이미지·PDF·문서 변환을 한 번에 준비해요.<br>설치할 때 문서 엔진 약 375MB를 받아요.<br>인터넷 연결과 2GB 이상 여유 공간이 필요해요.</p>
+    <p class="os-mac">이미지·PDF는 바로.<br>문서 변환 기능(약 300MB)은 처음 한 번만 추가해요.</p>
+    <p class="os-win">이미지·PDF·문서 변환을 한 번에 준비해요.<br>설치할 때 문서 변환 기능(약 375MB)도 함께 받아요.<br>인터넷 연결과 2GB 이상 여유 공간이 필요해요.</p>
   </div>
+</section>
+
+<section id="install" class="sec install wrap" data-in>
+  <div class="sec-head">
+    <h2 class="r">처음 한 번만,<br>이렇게 열어요.</h2>
+    <p class="note r" style="--d:.125s"><span class="os-mac">아직 Apple 공증 전이라 처음 열 때 경고가 떠요.</span><span class="os-win">아직 코드 서명 전이라 처음 실행할 때 경고가 떠요.</span><br><button type="button" class="os-switch"><span class="os-mac">Windows 설치 방법 보기</span><span class="os-win">Mac 설치 방법 보기</span></button></p>
+  </div>
+  <ol class="steps-list os-mac">
+    <li class="r"><b>DMG 열기</b><p>받은 DMG를 열고, Morphy를 응용 프로그램 폴더로 끌어다 놓아요.</p></li>
+    <li class="r" style="--d:.125s"><b>경고 창 닫기</b><p>처음 열면 "Apple이 확인할 수 없다"는 창이 떠요. [완료]를 눌러 닫아요.</p></li>
+    <li class="r" style="--d:.25s"><b>그래도 열기</b><p>시스템 설정 → 개인정보 보호 및 보안에서 아래로 내려 [그래도 열기]를 누르고 암호를 입력해요.</p></li>
+    <li class="r" style="--d:.375s"><b>권한 허용</b><p>손쉬운 사용에서 Morphy를 켜요. Option 키를 알아채는 데 필요해요. 처음 변환할 때 묻는 Finder 제어도 [허용]해요.</p></li>
+  </ol>
+  <ol class="steps-list os-win">
+    <li class="r"><b>다운로드 유지</b><p>브라우저가 자주 받지 않는 파일이라고 경고하면 [유지]를 눌러요.</p></li>
+    <li class="r" style="--d:.125s"><b>추가 정보 → 실행</b><p>"Windows의 PC 보호" 창이 뜨면 [추가 정보]를 누른 뒤 [실행]을 눌러요.</p></li>
+    <li class="r" style="--d:.25s"><b>설치 기다리기</b><p>문서 변환 기능(약 375MB)까지 자동으로 받아요. 인터넷 연결과 2GB 이상 여유 공간이 필요하고, 관리자 권한은 필요 없어요.</p></li>
+    <li class="r" style="--d:.375s"><b>바로 쓰기</b><p>설치가 끝나면 사용 방법 창이 떠요. 탐색기에서 파일을 고르고 Ctrl+Alt를 꾹 누르면 돼요.</p></li>
+  </ol>
+</section>
+
+<section id="faq" class="sec faq wrap" data-in>
+  <div class="sec-head"><h2 class="r">자주 묻는 질문</h2></div>
+  <details class="r"><summary>무료인가요?</summary><p>네, 무료예요. 소스 코드도 <a href="https://github.com/tpals0409/Morphy">GitHub</a>에 MIT 라이선스로 공개돼 있어요.</p></details>
+  <details class="r" style="--d:.0625s"><summary>파일이 외부로 나가나요?</summary><p>아니요. 변환은 모두 내 컴퓨터 안에서 해요. 결과는 원본과 같은 폴더에 새 파일로 저장되고, 같은 이름이 있으면 "보고서 (1).pdf"처럼 번호를 붙여요.</p></details>
+  <details class="r" style="--d:.125s"><summary>인터넷이 없어도 되나요?</summary><p>변환에는 인터넷이 필요 없어요. 앱과 문서 변환 기능을 처음 받을 때, 그리고 업데이트를 확인할 때만 연결해요.</p></details>
+  <details class="r" style="--d:.1875s"><summary>여러 파일을 한 번에 바꿀 수 있나요?</summary><p>지금은 한 번에 파일 하나만 바꿀 수 있어요. 파일을 여러 개 고르면 메뉴가 열리지 않아요.</p></details>
+  <details class="r" style="--d:.25s"><summary>Intel Mac에서도 되나요?</summary><p>아니요. Apple Silicon(M1 이후) Mac과 macOS 14 이상에서만 동작해요. Windows는 Windows 11 64비트에서 동작해요.</p></details>
+  <details class="r" style="--d:.3125s"><summary>왜 보안 경고가 뜨나요?</summary><p>아직 Apple 공증과 Windows 코드 서명을 받지 않아서예요. 준비하고 있고, 받으면 경고 없이 열려요. 진행 상황은 <a href="/code-signing">코드 서명 정책</a>에 있어요.</p></details>
+  <details class="r" style="--d:.375s"><summary>업데이트는 어떻게 하나요?</summary><p>새 버전이 나오면 Morphy 메뉴에 업데이트 항목이 나타나요. Mac은 메뉴 막대, Windows는 알림 영역의 Morphy 아이콘을 누르면 돼요. 0.1.0을 쓰고 있다면 이 페이지에서 새로 받아 주세요.</p></details>
 </section>
 
 <section class="cta" data-in>
@@ -466,10 +525,10 @@ html.win .titlebar { background: #f3f3f3; }
   <div class="wrap">
     <h2><span class="line"><span class="r">변환은 짧게.</span></span><span class="line"><span class="r" style="--d:.125s">몰입은 길게.</span></span></h2>
     <div class="act r" style="--d:.25s">
-      <a class="btn btn-dark" href="/download">macOS 다운로드 ↗</a>
+      <a class="btn btn-dark dl-mac" href="/download">macOS 다운로드 ↗</a>
       <small class="win-off">Windows 버전 개발 중</small>
-      <a class="btn win-on" href="/download/windows" hidden>Windows 다운로드 ↗</a>
-      <small class="win-on" hidden>Windows 11 64비트 · <span class="win-ver">0.1.0</span> 베타 · 미서명<br>설치할 때 문서 엔진(약 375MB)을 추가로 받아요.<br>인터넷 연결과 2GB 이상 여유 공간이 필요해요.<br><a href="/releases/WicHeic-v1.1.16-corresponding-source.zip">HEIC 코덱 대응 소스(LGPL)</a></small>
+      <a class="btn dl-win win-on" href="/download/windows" hidden>Windows 다운로드 ↗</a>
+      <small><span class="os-mac">macOS 14 이상 · Apple Silicon 전용</span><span class="os-win win-on" hidden>Windows 11 64비트 · <span class="win-ver">0.1.8</span> 베타 · 코드 서명 전<br>설치할 때 문서 변환 기능(약 375MB)도 함께 받아요.<br><a href="/releases/WicHeic-v1.1.16-corresponding-source.zip">HEIC 코덱 소스 코드(LGPL)</a></span></small>
     </div>
     <div></div>
   </div>
@@ -478,7 +537,7 @@ html.win .titlebar { background: #f3f3f3; }
 <footer class="wrap foot" data-in>
   <a class="logo foot-logo" href="#"><img src="icon.png" alt="">Morphy</a>
   <div class="rel"><span id="rel-ver">v0.1.0</span> · macOS 14 이상 · Apple Silicon<code id="rel-sha" hidden></code><span class="win-on" hidden><br>Windows <span id="rel-win-ver"></span> · Windows 11 64비트<code id="rel-win-sha"></code></span></div>
-  <a href="/code-signing">Code signing policy · Privacy</a>
+  <div class="foot-links"><a href="https://github.com/tpals0409/Morphy">GitHub · 소스 코드</a> · <a href="/code-signing">Code signing policy · Privacy</a></div>
 </footer>
 
 <script>
@@ -499,6 +558,8 @@ html.win .titlebar { background: #f3f3f3; }
     document.getElementById('rel-win-ver').textContent = 'v' + r.version + ' · ' + (r.bytes / 1048576).toFixed(0) + 'MB';
     document.getElementById('rel-win-sha').textContent = 'SHA-256 ' + r.sha256;
   }).catch(() => {});
+  // 설치 방법의 '다른 OS 보기': 페이지 전체의 OS 표시를 바꿔요.
+  document.querySelector('.os-switch').addEventListener('click', () => document.documentElement.classList.toggle('win'));
   const io = new IntersectionObserver(es => es.forEach(e => {
     if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
   }), { threshold: .15 });
