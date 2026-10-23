@@ -52,6 +52,8 @@ def convert(source, target, case):
             pdfs.append(file)
     if target == "csv":
         assert all("�" not in file.read_text(encoding="utf-8-sig") for file in files)
+        # utf-8-sig reads with or without a BOM; Korean Excel needs it, so require it explicitly.
+        assert all(file.read_bytes().startswith(b"\xef\xbb\xbf") for file in files), "CSV must start with a UTF-8 BOM for Excel"
         if source.stem.startswith("매출"):
             assert len(files) == 2, "Multi-sheet CSV output count"
             assert any("SHEET-TWO" in f.read_text(encoding="utf-8-sig") for f in files)
