@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Windows.Media;
@@ -15,6 +15,20 @@ internal static class SelfTest
         try
         {
             void Check(bool value, string why) { if (!value) throw new Exception(why); }
+            foreach (var keys in new[] { (0xA2u, 0xA4u), (0xA4u, 0xA2u), (0xA3u, 0xA4u) })
+            {
+                var chord = new ShortcutChord();
+                Check(chord.Update(keys.Item1, true, true) == 0, "One modifier does not open");
+                Check(chord.Update(keys.Item2, true, true) == 1 && chord.Claimed, "Both modifier orders open");
+                Check(chord.Update(keys.Item2, true, true) == 0, "Repeat must not reopen");
+                Check(chord.Update(keys.Item1, false, true) == -1 && !chord.Claimed, "Release either modifier executes once");
+                Check(chord.Update(keys.Item2, false, true) == 0, "Second release must not execute again");
+                chord.Update(keys.Item1, true, false);
+                Check(chord.Update(keys.Item2, true, false) == 0 && !chord.Claimed, "Ineligible chord passes through");
+                Check(chord.Update(keys.Item2, true, true) == 0, "Focus change while held must not open");
+                Check(chord.Update(keys.Item2, false, true) == 0, "Unclaimed release does not execute");
+                Check(chord.Update(keys.Item2, true, true) == 1, "Next chord opens");
+            }
             Check(RadialMenu.Hit(0, 0) == -1, "Center must cancel");
             Check(RadialMenu.Hit(0, -140) == -1, "Outside must cancel");
             Check(RadialMenu.Hit(0, -95) == 0, "Top slot");

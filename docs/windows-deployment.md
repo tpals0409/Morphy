@@ -1,27 +1,46 @@
-# Windows 빌드와 웹 배포
+﻿# Windows 빌드와 웹 배포
 
-Windows는 미서명 0.1.0 베타를 일반 버전으로 배포한다. GitHub는 소스 및 빌드 결과 보관에 사용하고, 사용자 다운로드와 앱 업데이트는 `https://morphy.tpals0409dev.workers.dev`(Cloudflare Worker, R2, D1)로 제공한다.
+Windows는 미서명 베타 설치본을 배포한다. GitHub는 소스 및 빌드 결과 보관에 사용하고, 사용자 다운로드와 앱 업데이트는 `https://morphy.tpals0409dev.workers.dev`(Cloudflare Worker, R2, D1)로 제공한다.
 
-## 1. GitHub Actions에서 설치 파일 받기
+## 1. main 자동 빌드·배포
 
-`Windows build and verification`은 main push, PR, 수동 실행을 지원한다. 수동 실행 시 `version`에 세 자리 버전(예: `0.1.0`)을 넣는다. .NET 빌드, 자체 검사, 실제 문서 변환, 설치 복구, Worker 다운로드 라우트 검사를 통과해야 아티팩트가 생성된다. 최초 다운로드에는 GitHub 로그인이 필요하며 아티팩트 보관 기간은 30일이다.
+`Windows build and release`는 main push에서 다음 순서로 실행한다.
 
-Mac에서 저장소를 받은 뒤 Actions의 성공한 실행을 골라 다운로드한다. 웹 UI의 Artifacts 다운로드도 가능하다.
+1. 앱 프로젝트의 기준 버전(현재 0.1.4)과 `/api/release/windows`의 게시 버전 중 높은 버전에서 patch를 1 올린다. 첫 배포는 0.1.5이며 이후 0.1.6, 0.1.7처럼 증가한다. 소스 버전을 자동 커밋하지 않으므로 CI 루프가 생기지 않는다.
+2. 앱 자체 검사, 실제 Office·한국어 문서 변환, 설치 검사, Worker 라우트 검사와 배포 스크립트 검사를 실행한다.
+3. 결정한 버전을 EXE 및 설치본에 넣고 GitHub Actions artifact를 만든다.
+4. R2에 설치본과 대응 소스를 업로드한 뒤, 마지막에 D1의 Windows 릴리스 정보를 갱신한다.
+5. 공개 API, 웹 다운로드 링크, 실제로 내려받은 EXE의 크기·SHA-256까지 확인한다.
+
+웹 다운로드와 앱의 **업데이트 확인…**은 같은 `/api/release/windows` 정보를 사용한다. 게시가 끝나면 기존 앱은 다음 확인에서 새 버전을 안내하고, 사용자 동의 후 설치한다. PC에 설치할 때마다 서버 버전을 수동 입력할 필요가 없다. Mac DMG 배포는 기존 절차를 유지한다.
+
+### 인증 가능한 PC에서 한 번 설정
+
+[저장소 Actions Secrets](https://github.com/tpals0409/Morphy/settings/secrets/actions)에 다음 repository secrets를 등록한다.
+
+| 이름 | 값 |
+| --- | --- |
+| `CLOUDFLARE_API_TOKEN` | 배포 계정 범위의 `Workers R2 Storage: Edit`, `D1: Edit` 권한을 가진 API 토큰 |
+| `CLOUDFLARE_ACCOUNT_ID` | `wrangler.jsonc`의 R2·D1이 속한 Cloudflare 계정 ID |
+
+Wrangler 로컬 로그인은 GitHub 러너에 전달되지 않으므로 Secrets 등록이 필요하다. 토큰은 Git/채팅/문서에 저장하지 않는다. 기존 D1 migration 0002까지 적용된 계정이어야 한다. CI는 Worker를 다시 배포하지 않고 R2·D1의 Windows 릴리스만 게시한다.
+
+Secrets 미등록 시 빌드 artifact는 남지만 publish 작업은 명시적인 오류로 실패한다. 등록 후 해당 실행의 **Re-run failed jobs**를 누르거나 main에서 workflow를 수동 실행한다. 수동 `version`은 비워 두면 자동 증가하며, 필요할 때만 현재 버전보다 높은 세 자리 버전을 지정한다.
+
+main 릴리스 작업은 직렬 실행한다. 빌드 중 main에 새 커밋이 생기면 이전 빌드는 게시하지 않고 최신 main 실행이 게시한다. PR과 main 외 브랜치의 수동 실행은 검증·artifact 생성만 하며 배포 인증 정보를 사용하지 않는다. 동일 artifact의 게시 재시도는 이미 등록된 내용과 정확히 일치하면 성공 처리하고, 같은 버전의 다른 파일이나 이전 버전으로의 되돌림은 거부한다.
+
+### artifact를 수동으로 게시해야 할 때
+
+성공한 main 빌드의 artifact 이름은 `Morphy-Windows-버전-커밋SHA`이며 30일간 보관한다. 설치 EXE는 Git에 포함하지 않는다.
 
 ```sh
 git pull --ff-only
 gh run list --repo tpals0409/Morphy --workflow windows.yml --branch main
-gh run view RUN_ID --repo tpals0409/Morphy
 gh run download RUN_ID --repo tpals0409/Morphy --dir ./windows-artifact
-```
-
-반드시 원하는 커밋의 **성공한 실행**을 선택한다. 아티팩트 이름은 `Morphy-Windows-버전-커밋SHA`다. 내부 `windows-release/`에 설치 EXE, SHA256SUMS.txt, windows-release.json, LGPL 코덱 대응 소스 ZIP과 설치 검사 기록이 있고, `windows-integration/report.json`에 변환 결과가 있다. 설치 EXE는 Git 소스에 포함되지 않는다.
-
-```sh
 python3 scripts/publish-release.py --artifact ./windows-artifact
 ```
 
-이 명령은 기본적으로 검증만 한다. Python 3.11 이상이 필요하다.
+검증만 수행하며 Python 3.11 이상이 필요하다. 인증된 PC에서 실제 게시하려면 아래 3절을 따른다.
 
 ## 2. 웹사이트 구조
 
@@ -37,7 +56,7 @@ D1에 줄이 있어도 R2의 파일 크기가 맞지 않으면 503을 돌려준�
 
 ## 3. 게시
 
-저장소 루트에서, 로그인된 Wrangler(`npx wrangler login`)로 실행한다. 설치 파일과 대응 소스를 R2에 먼저 올리고, 모두 성공한 뒤 마지막으로 D1에 줄을 넣는다. 이미 게시한 버전이면 아무것도 올리지 않고 멈춘다.
+저장소 루트에서, 로그인된 Wrangler(`npx wrangler login`)로 실행한다. 설치 파일과 대응 소스를 R2에 먼저 올리고, 모두 성공한 뒤 마지막으로 D1에 줄을 넣는다. 동일 버전·동일 내용으로 재시도하면 아무것도 바꾸지 않고 성공 처리한다. 동일 버전의 다른 파일이나 이미 게시된 버전보다 낮은 버전은 거부한다.
 
 ```sh
 python3 scripts/publish-release.py --artifact ./windows-artifact --publish

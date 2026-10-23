@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading;
 using System.Windows;
@@ -11,7 +11,7 @@ internal static class Program
     private static int Main(string[] args)
     {
         try { return Run(args); }
-        catch (Exception e) { Settings.Log(e.ToString()); Console.Error.WriteLine(e); if (args.Length == 0) MessageBox.Show(e.Message, "Morphy", MessageBoxButton.OK, MessageBoxImage.Error); return 1; }
+        catch (Exception e) { Settings.Log(e.ToString()); Console.Error.WriteLine(e); if (args.Length == 0 || args.Contains("--check-updates")) MessageBox.Show(e.Message, "Morphy", MessageBoxButton.OK, MessageBoxImage.Error); return 1; }
     }
     private static int Run(string[] args)
     {
@@ -39,7 +39,12 @@ internal static class Program
         if (args.Contains("--selftest")) return SelfTest.Run();
         if (args.Length == 2 && args[0] == "--render-menu") { RadialMenu.RenderPreview(args[1]); return 0; }
         using var singleton = new Mutex(true, @"Local\Morphy.Windows", out bool created);
-        if (!created) return 0;
+        bool checkUpdates = args.Contains("--check-updates");
+        if (!created)
+        {
+            if (checkUpdates) ControlServer.RequestUpdateCheck().GetAwaiter().GetResult();
+            return 0;
+        }
         var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         app.DispatcherUnhandledException += (_, e) =>
         {
@@ -48,7 +53,7 @@ internal static class Program
             e.Handled = true;
         };
         bool smoke = args.Contains("--smoke-test");
-        using var tray = new TrayApp(smoke);
+        using var tray = new TrayApp(smoke, checkUpdates);
         if (smoke)
         {
             var timer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };

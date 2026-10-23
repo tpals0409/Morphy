@@ -1,4 +1,4 @@
-name: Windows build and verification
+name: Windows build and release
 on:
   push:
     branches: [main]
@@ -6,17 +6,39 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Windows package version
-        default: '0.1.0'
-        required: true
+        description: "Optional version override (blank = next patch)"
+        required: false
+        type: string
 permissions:
   contents: read
+# Serialize main releases through version selection, build and publication.
+# PRs have independent groups and never receive deployment credentials.
+concurrency:
+  group: windows-release-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
   windows:
     runs-on: windows-latest
     timeout-minutes: 45
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      artifact: Morphy-Windows-${{ steps.version.outputs.version }}-${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Release automation tests
+        shell: bash
+        run: |
+          python scripts/test-windows-version.py
+          python scripts/test-publish-release.py
+      - name: Select next Windows version
+        id: version
+        shell: pwsh
+        env:
+          REQUESTED_VERSION: ${{ inputs.version }}
+        run: python scripts/windows-version.py --requested "$env:REQUESTED_VERSION"
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
@@ -28,9 +50,6 @@ jobs:
       - name: Build and self-test
         shell: pwsh
         run: ./build-windows.ps1 -SelfTest
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
       - name: Office and Korean document verification
         shell: pwsh
         run: |
@@ -39,7 +58,7 @@ jobs:
       - name: Package
         shell: pwsh
         env:
-          PACKAGE_VERSION: ${{ inputs.version || '0.1.0' }}
+          PACKAGE_VERSION: ${{ steps.version.outputs.version }}
         run: ./scripts/package-windows.ps1 -Version $env:PACKAGE_VERSION
       - name: Installer self-test
         shell: pwsh
@@ -55,7 +74,7 @@ jobs:
         run: python scripts/publish-release.py --artifact build/windows-release
       - uses: actions/upload-artifact@v4
         with:
-          name: Morphy-Windows-${{ inputs.version || '0.1.0' }}-${{ github.sha }}
+          name: Morphy-Windows-${{ steps.version.outputs.version }}-${{ github.sha }}
           retention-days: 30
           compression-level: 0
           path: |
@@ -66,3 +85,52 @@ jobs:
             build/windows-release/setup-selftest.txt
             build/windows-integration/report.json
           if-no-files-found: error
+
+  publish:
+    needs: windows
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.windows.outputs.artifact }}
+          path: release-artifact
+      - name: Require Cloudflare deployment credentials
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo '::error::Add the CLOUDFLARE_API_TOKEN Actions secret'; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo '::error::Add the CLOUDFLARE_ACCOUNT_ID Actions secret'; exit 1; }
+      - name: Skip a superseded main build
+        id: head
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          head=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+          if [ "$head" = "$GITHUB_SHA" ]; then
+            echo 'current=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'Newer main commit exists; its workflow will publish.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Publish installer and activate Windows release
+        if: steps.head.outputs.current == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: python scripts/publish-release.py --artifact release-artifact --publish
+      - name: Verify website and app update feed
+        if: steps.head.outputs.current == 'true'
+        env:
+          RELEASE_VERSION: ${{ needs.windows.outputs.version }}
+        run: |
+          python scripts/verify-windows-release.py --artifact release-artifact
+          echo "Windows $RELEASE_VERSION published: website downloads and in-app update checks use the same release." >> "$GITHUB_STEP_SUMMARY"

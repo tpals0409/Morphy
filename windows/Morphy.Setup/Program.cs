@@ -33,8 +33,9 @@ internal static class Program
             var label = new TextBlock { Text = remove ? "Morphy를 제거하는 중…" : "Morphy를 설치하는 중…", FontSize = 18, Margin = new Thickness(0, 0, 0, 20) };
             var bar = new ProgressBar { Minimum = 0, Maximum = 100, Height = 12 };
             var button = new Button { Content = "취소", Margin = new Thickness(0, 20, 0, 0), Padding = new Thickness(14, 6, 14, 6), HorizontalAlignment = HorizontalAlignment.Right };
-            button.Click += (_, _) => cancel.Cancel(); var content = new StackPanel { Margin = new Thickness(28) }; content.Children.Add(label); content.Children.Add(bar); content.Children.Add(button);
+            button.Click += (_, _) => cancel.Cancel(); var content = new StackPanel { Margin = new Thickness(28) }; content.Children.Add(Brand.LogoView()); content.Children.Add(label); content.Children.Add(bar); content.Children.Add(button);
             var window = new Window { Title = "Morphy", Width = 420, SizeToContent = SizeToContent.Height, ResizeMode = ResizeMode.NoResize, WindowStartupLocation = WindowStartupLocation.CenterScreen, Content = content };
+            Brand.Apply(window);
             bool finished = false; window.Closing += (_, e) => { if (!finished) { cancel.Cancel(); e.Cancel = true; } };
             window.Loaded += async (_, _) =>
             {

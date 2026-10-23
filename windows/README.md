@@ -1,6 +1,6 @@
-# Morphy Windows
+﻿# Morphy Windows
 
-Windows 11 x64용 C#/.NET 10 WPF 앱입니다. 탐색기나 바탕화면에서 파일 하나를 선택하고 왼쪽 Alt를 0.15초 누른 뒤 원하는 형식으로 포인터를 이동하여 놓으면 변환합니다. 가운데와 바깥에서 놓거나 Esc를 누르면 취소합니다.
+Windows 11 x64용 C#/.NET 10 WPF 앱입니다. 탐색기나 바탕화면에서 파일 하나를 선택하고 Ctrl+Alt를 누른 채 원하는 형식으로 포인터를 이동한 뒤 Ctrl+Alt를 놓으면 변환합니다. 가운데와 바깥에서 놓거나 Esc를 누르면 취소합니다.
 
 ## 빌드와 실행
 
@@ -18,8 +18,10 @@ Windows 11 x64용 C#/.NET 10 WPF 앱입니다. 탐색기나 바탕화면에서 �
 
 ## 구현 기능
 
+Windows 앱·설치 파일·트레이는 macOS `assets/AppIcon.icns`에서 가져온 동일한 로고를 사용합니다. `scripts/make-windows-icon.ps1`로 PNG와 여러 해상도의 ICO를 재생성할 수 있습니다. 원형 메뉴와 안내·진행 화면의 공통 색상은 `windows/Shared/Brand.cs`에 있으며, Mac의 주황색 `#F47B55`, 크림색 `#FFF7ED`, 따뜻한 갈색 다크 테마를 따릅니다.
+
 - 트레이, 최초 사용 안내, 단일 인스턴스, 설정 저장, 로그인 자동 실행 옵션.
-- 탐색기 활성 탭·바탕화면 단일 선택 읽기, 편집 중 입력 제외, 왼쪽 Alt 원형 메뉴, 클릭·방향키·Enter 실행과 Esc 취소.
+- 탐색기 활성 탭·바탕화면 단일 선택 읽기, 편집 중 입력 제외, Ctrl+Alt 원형 메뉴, 클릭·방향키·Enter 실행과 Esc 취소.
 - 라이트·다크 테마, 고대비 색상, 접근성 이름, 더 보기, 다중 DPI 좌표 처리.
 - 작업 대기열, 취소, Windows 트레이 알림, 실패 재시도, 결과 열기와 탐색기에서 보기.
 - 로컬 변환, 원본 보존, 이름 충돌 시 번호 부여, 검증 후 저장, 쓰기 불가능한 폴더의 대체 경로 선택.
@@ -55,7 +57,7 @@ Start-Process .\build\windows-release\Morphy-0.1.0-win-x64-Setup.exe -ArgumentLi
 
 수동 확인이 필요한 항목:
 
-- 실제 탐색기 활성 탭과 바탕화면 선택, 이름 변경·주소·검색 입력, 짧은 Alt 및 Alt 조합.
+- 실제 탐색기 활성 탭과 바탕화면 선택, 이름 변경·주소·검색 입력, Ctrl+Alt 반복 입력·빠른 놓기 및 기존 Alt 조합 보존.
 - 메뉴 가운데·바깥·Esc 취소, 클릭 전달 방지, 선택 변경과 앱 전환.
 - 화면 가장자리, 혼합 DPI·다중 모니터, Windows 알림 설정.
 - 실제 사용자 설치·제거와 로그인 자동 실행, 게시된 릴리스를 통한 업데이트.
@@ -71,3 +73,7 @@ Start-Process .\build\windows-release\Morphy-0.1.0-win-x64-Setup.exe -ArgumentLi
 배포에는 설치 파일, `SHA256SUMS.txt`, `scripts/package-codec-sources.ps1`로 생성한 `WicHeic-v1.1.16-corresponding-source.zip`을 함께 제공하세요. 라이선스와 소스 제공 사항은 [THIRD-PARTY.md](THIRD-PARTY.md)를 참고하세요.
 
 GitHub Actions 아티팩트를 Mac에서 받아 기존 Worker와 R2에 배포하는 절차는 [Windows 배포 안내](../docs/windows-deployment.md)에 있습니다. `windows-release.json`은 패키징 시 실제 EXE를 기준으로 자동 생성합니다. Worker 변경은 Mac의 기존 프로젝트에 통합해야 합니다.
+
+업데이트 확인은 트레이 아이콘 우클릭 메뉴와 작업표시줄 아이콘 우클릭의 작업 목록에서 실행할 수 있습니다. 작업표시줄 항목은 실행 중인 Morphy에 요청을 전달하며, 앱이 꺼져 있으면 실행한 뒤 확인합니다.
+
+main 자동 버전 증가와 R2·D1 게시 설정은 [Windows 배포 안내](../docs/windows-deployment.md)를 참고하세요. GitHub에 Cloudflare Actions Secrets를 한 번 등록하면 이후 main 갱신에서 웹 다운로드와 앱 업데이트 정보가 함께 갱신됩니다.
