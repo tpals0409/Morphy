@@ -20,6 +20,9 @@ internal static class Program
     {
         try
         {
+            // Older apps launch updates with the install directory as the inherited CWD.
+            // Release that directory before replacing/removing it (including --remove).
+            Directory.SetCurrentDirectory(Path.GetTempPath());
             if (args.Contains("--selftest")) return Test();
             if (args.Contains("--uninstall"))
             {
