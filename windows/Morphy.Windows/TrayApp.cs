@@ -78,7 +78,7 @@ internal sealed class TrayApp : IDisposable
         panel.Children.Add(new TextBlock { Text = "파일 변환, 손끝에서.", FontSize = 28, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 24) });
         foreach (string line in new[] { "1   탐색기에서 파일 하나를 선택하세요.", "2   Ctrl+Alt를 누른 채 원하는 형식으로 이동하세요.", "3   Ctrl 또는 Alt에서 손을 떼면 변환돼요." }) panel.Children.Add(new TextBlock { Text = line, FontSize = 16, Margin = new Thickness(0, 0, 0, 16) });
         panel.Children.Add(new TextBlock { Text = "가운데나 바깥에서 놓으면 취소돼요. Esc로도 취소할 수 있어요.\n클릭이나 방향키·Enter로도 실행할 수 있어요.\n원본은 그대로, 결과는 같은 폴더에 저장돼요.", FontSize = 13, Foreground = Brushes.DimGray, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 20) });
-        panel.Children.Add(new TextBlock { Text = "이미지 · PDF · Word · Excel · PowerPoint를 변환해요.\n문서 변환 기능은 앱 설치 때 함께 준비해요.\n파일은 외부로 보내지 않아요.", FontSize = 12, Foreground = Brushes.DimGray, TextWrapping = TextWrapping.Wrap });
+        panel.Children.Add(new TextBlock { Text = "이미지 · PDF · Word · Excel · PowerPoint를 변환해요.\n설치가 끝나면 모든 변환 기능을 바로 사용할 수 있어요.\n파일은 외부로 보내지 않아요.", FontSize = 12, Foreground = Brushes.DimGray, TextWrapping = TextWrapping.Wrap });
         var button = new Button { Content = "시작하기", Padding = new Thickness(18, 10, 18, 10), Margin = new Thickness(0, 24, 0, 0), HorizontalAlignment = HorizontalAlignment.Right };
         button.Click += (_, _) => { settings.OnboardingShown = true; settings.Save(); guide?.Close(); };
         panel.Children.Add(button);
