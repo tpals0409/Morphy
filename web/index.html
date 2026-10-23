@@ -128,7 +128,7 @@ html.win .titlebar { background: #f3f3f3; }
 .spark { left: 112px; top: 18px; rotate: -55deg; }
 .spark::before { content: ""; left: -4px; top: 12px; rotate: 45deg; }
 
-/* 형식은 바꿔도 */
+/* 이럴 때, 바로 바꿔요 */
 .pace { --pw: 108px; --aw: 52px; --g: 14px; --shift: calc(-1 * (var(--pw) + var(--aw) + 2 * var(--g))); }
 .pace .sec-head p { max-width: 220px; text-align: right; }
 .pace h2 { display: flex; flex-direction: column; }
@@ -181,6 +181,7 @@ html.win .titlebar { background: #f3f3f3; }
 .cta small { display: block; font-size: 12px; font-weight: 600; line-height: 1.6; }
 .cta small a { text-decoration: underline; }
 /* 방문자 OS의 다운로드 버튼을 앞에, 진하게 */
+.dl-mac, .dl-win { min-width: 200px; justify-content: center; }  /* same size whichever OS comes first */
 html.win .dl-win { order: -1; background: var(--ink); color: #fff; }
 html.win .dl-mac { background: transparent; color: var(--ink); }
 .req { margin-top: 14px; }
@@ -219,8 +220,8 @@ html:not(.phone) .phone-only { display: none !important; }
 /* ---------- 모션 ---------- */
 @media (prefers-reduced-motion: no-preference) {
   @keyframes up { from { translate: 0 110%; } to { translate: 0 0; } }
-  @keyframes rise { from { clip-path: inset(100% 0 0 0); translate: 0 24px; } to { clip-path: inset(0 0 0 0); translate: 0 0; } }
-  @keyframes slide { from { clip-path: inset(0 100% 0 0); translate: -24px 0; } to { clip-path: inset(0 0 0 0); translate: 0 0; } }
+  @keyframes rise { from { clip-path: inset(100% 0 0 0); translate: 0 24px; } to { clip-path: inset(-40px); translate: 0 0; } }  /* ends past the edges: a hovered button grows 4% */
+  @keyframes slide { from { clip-path: inset(0 100% 0 0); translate: -24px 0; } to { clip-path: inset(-40px); translate: 0 0; } }
   @keyframes pop { from { scale: 0; } to { scale: 1; } }
   @keyframes stick { from { scale: .4; rotate: 25deg; } to { scale: 1; rotate: -12deg; } }
   @keyframes flip { from { translate: -26% 10px; rotate: y 180deg; } to { translate: 0 0; rotate: y 0deg; } }
@@ -403,7 +404,7 @@ html:not(.phone) .phone-only { display: none !important; }
 </div>
 
 <section id="how" class="sec steps wrap" data-in>
-  <div class="sec-head"><h2 class="r">딱, 이 정도면 끝.</h2><span class="note r">사용 방법 · <span class="os-mac">macOS</span><span class="os-win">Windows</span> 기준</span></div>
+  <div class="sec-head"><h2 class="r">사용 방법</h2><span class="note r"><span class="os-mac">macOS</span><span class="os-win">Windows</span> 기준</span></div>
   <ol>
     <li>
       <svg class="num" viewBox="0 0 120 84"><text x="0" y="78">01</text></svg>
@@ -426,8 +427,8 @@ html:not(.phone) .phone-only { display: none !important; }
 
 <section class="sec pace wrap" data-in>
   <div class="sec-head">
-    <h2><span class="line"><span class="r">형식은 바꿔도,</span></span><span class="line"><span class="go r" style="--d:.125s">페이스는 그대로. <svg viewBox="0 0 48 48" fill="none" stroke="var(--orange)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="24" cy="24" r="21"/><path d="M14 24h20M26 15l9 9-9 9"/></svg></span></span></h2>
-    <p class="note r" style="--d:.25s">자주 쓰는 형식으로,<br>필요한 순간에.<br>복잡한 변환도 한 번에,<br>흐름은 그대로.</p>
+    <h2><span class="line"><span class="r">이럴 때,</span></span><span class="line"><span class="go r" style="--d:.125s">바로 바꿔요. <svg viewBox="0 0 48 48" fill="none" stroke="var(--orange)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="24" cy="24" r="21"/><path d="M14 24h20M26 15l9 9-9 9"/></svg></span></span></h2>
+    <p class="note r" style="--d:.25s">사진은 JPG로,<br>보고서는 PDF로,<br>표는 CSV로.</p>
   </div>
   <div class="row">
     <div class="pill">HEIC</div>
