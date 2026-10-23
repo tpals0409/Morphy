@@ -80,3 +80,7 @@ curl -I https://morphy.tpals0409dev.workers.dev/download/windows
 Mac 링크가 여전히 DMG를 가리키는지, Windows 링크가 EXE를 가리키는지 확인한다. Windows EXE를 실제 내려받아 JSON의 SHA-256과 비교하고 깨끗한 Windows 11 계정에서 설치한다. 문서 엔진이 없는 PC에서 다운로드→검증→설치→앱 실행을 확인한다. 다음 버전 배포 때는 이전 앱에서 업데이트 알림, 설정·엔진 보존, 사용자 선택 후 설치까지 확인한다. 현재 코드 서명은 적용하지 않았다.
 
 참고: [GitHub 아티팩트 다운로드](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/download-workflow-artifacts), [Cloudflare R2 Worker API](https://developers.cloudflare.com/r2/api/workers/workers-api-reference/), [Cloudflare D1](https://developers.cloudflare.com/d1/).
+
+## 기본 설치 경험
+
+Windows 설치 파일을 실행하면 별도의 기능 선택 질문 없이 Morphy 설치를 시작한다. 이미지·문서 변환에 필요한 구성 요소를 모두 기본으로 준비하며, 이미 설치된 문서 엔진은 재사용한다. 설치 중에는 취소할 수 있고, 필요한 구성 요소 준비에 실패하면 설치를 완료한 것으로 처리하지 않는다.

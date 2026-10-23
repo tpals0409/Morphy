@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
 using System.Reflection;
@@ -31,12 +31,13 @@ internal static class Program
                 Process.Start(new ProcessStartInfo(copy, "--remove") { UseShellExecute = false, CreateNoWindow = true }); return 0;
             }
             bool remove = args.Contains("--remove");
-            if (!remove && !args.Contains("--update") && MessageBox.Show("Morphy와 문서 변환 기능을 함께 설치할까요?\n\n문서 변환 기능이 없으면 LibreOffice를 공식 서버에서 약 375MB 내려받아요. 인터넷 연결과 2GB 이상의 여유 공간이 필요해요. 관리자 권한은 필요하지 않아요.", "Morphy 설치", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return 0;
             var app = new Application(); var cancel = new CancellationTokenSource();
             var label = new TextBlock { Text = remove ? "Morphy를 제거하는 중…" : "Morphy를 설치하는 중…", FontSize = 18, Margin = new Thickness(0, 0, 0, 20) };
             var bar = new ProgressBar { Minimum = 0, Maximum = 100, Height = 12 };
             var button = new Button { Content = "취소", Margin = new Thickness(0, 20, 0, 0), Padding = new Thickness(14, 6, 14, 6), HorizontalAlignment = HorizontalAlignment.Right };
-            button.Click += (_, _) => cancel.Cancel(); var content = new StackPanel { Margin = new Thickness(28) }; content.Children.Add(Brand.LogoView()); content.Children.Add(label); content.Children.Add(bar); content.Children.Add(button);
+            button.Click += (_, _) => cancel.Cancel(); var content = new StackPanel { Margin = new Thickness(28) }; content.Children.Add(Brand.LogoView()); content.Children.Add(label); content.Children.Add(bar);
+            if (!remove) content.Children.Add(new TextBlock { Text = "이미지와 문서 변환에 필요한 파일을 자동으로 준비해요.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 12, 0, 0) });
+            content.Children.Add(button);
             var window = new Window { Title = "Morphy", Width = 420, SizeToContent = SizeToContent.Height, ResizeMode = ResizeMode.NoResize, WindowStartupLocation = WindowStartupLocation.CenterScreen, Content = content };
             Brand.Apply(window);
             bool finished = false; window.Closing += (_, e) => { if (!finished) { cancel.Cancel(); e.Cancel = true; } };
@@ -101,7 +102,7 @@ internal static class Program
     }
     private static async Task PrepareEngine(string app, CancellationToken token, Action<string, double> progress)
     {
-        token.ThrowIfCancellationRequested(); progress("문서 변환 기능을 준비하는 중…", 0);
+        token.ThrowIfCancellationRequested(); progress("Morphy 설치에 필요한 파일을 준비하는 중…", 0);
         var info = new ProcessStartInfo(app) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true };
         info.ArgumentList.Add("--install-engine");
         using var child = Process.Start(info) ?? throw new IOException("문서 변환 기능 설치를 시작하지 못했어요.");
@@ -112,7 +113,7 @@ internal static class Program
             while (await child.StandardOutput.ReadLineAsync() is { } line)
             {
                 using var json = System.Text.Json.JsonDocument.Parse(line);
-                progress("문서 변환 · " + json.RootElement.GetProperty("stage").GetString(), Math.Clamp(json.RootElement.GetProperty("fraction").GetDouble(), 0, 1));
+                progress("Morphy 설치 · " + json.RootElement.GetProperty("stage").GetString(), Math.Clamp(json.RootElement.GetProperty("fraction").GetDouble(), 0, 1));
             }
         });
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(token); deadline.CancelAfter(TimeSpan.FromMinutes(45));
