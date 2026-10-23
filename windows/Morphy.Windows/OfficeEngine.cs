@@ -64,6 +64,12 @@ internal static class OfficeEngine
         {
             string canonical = Path.Combine(staging, stem + ".csv"); if (!string.Equals(outputs[0], canonical, StringComparison.OrdinalIgnoreCase)) { File.Move(outputs[0], canonical); outputs[0] = canonical; }
         }
+        // UTF-8 BOM on every sheet's CSV: Korean-locale Excel otherwise reads it as CP949 and garbles Hangul (the Mac app does the same).
+        if (format.Extension == "csv")
+        {
+            byte[] bom = Encoding.UTF8.GetPreamble();
+            foreach (string csv in outputs) { byte[] data = File.ReadAllBytes(csv); if (!data.AsSpan().StartsWith(bom)) File.WriteAllBytes(csv, bom.Concat(data).ToArray()); }
+        }
         return outputs;
     }
     private static void ValidateInput(string source, string ext)
