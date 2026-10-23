@@ -1,0 +1,219 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Threading;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Threading;
+using Forms = System.Windows.Forms;
+
+namespace Morphy;
+
+internal sealed class TrayApp : IDisposable
+{
+    private readonly Settings settings = Settings.Load();
+    private readonly Forms.NotifyIcon tray;
+    private readonly AltTrigger trigger;
+    private readonly List<Job> jobs = [];
+    private bool running;
+    private bool maintenance;
+    private CancellationTokenSource? currentCancellation;
+    private Task<bool>? engineTask;
+    private readonly ControlServer control;
+    private Window? guide;
+    private sealed class Job(string source, OutputFormat format, string destination)
+    {
+        internal readonly string Source = source, Destination = destination;
+        internal readonly OutputFormat Format = format;
+        internal string State = "대기", Error = "";
+        internal string[] Results = [];
+    }
+    internal TrayApp(bool smoke = false)
+    {
+        tray = new Forms.NotifyIcon { Text = "Morphy " + Updates.Current, Icon = CreateIcon(), Visible = true };
+        trigger = new AltTrigger(() => settings.TriggerEnabled && !maintenance) { Convert = Enqueue };
+        control = new ControlServer(() => !running && !maintenance && engineTask == null);
+        tray.MouseClick += (_, e) => { if (e.Button == Forms.MouseButtons.Left) ShowGuide(); };
+        Refresh();
+        if (!smoke && !settings.OnboardingShown) Application.Current.Dispatcher.BeginInvoke(ShowGuide);
+        if (!smoke) _ = CheckUpdates(false);
+    }
+    private static System.Drawing.Icon CreateIcon()
+    {
+        using var bitmap = new System.Drawing.Bitmap(32, 32);
+        using (var g = System.Drawing.Graphics.FromImage(bitmap))
+        {
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            using var pen = new System.Drawing.Pen(System.Drawing.Color.FromArgb(122, 99, 245), 7);
+            g.DrawArc(pen, 7, 7, 19, 19, -25, 290);
+            g.DrawArc(pen, 8, 4, 19, 19, -88, 48);
+        }
+        nint handle = bitmap.GetHicon();
+        try { return (System.Drawing.Icon)System.Drawing.Icon.FromHandle(handle).Clone(); }
+        finally { DestroyIcon(handle); }
+    }
+    [System.Runtime.InteropServices.DllImport("user32.dll")] private static extern bool DestroyIcon(nint icon);
+    private void ShowGuide()
+    {
+        if (guide != null) { guide.Activate(); return; }
+        var panel = new StackPanel { Margin = new Thickness(32) };
+        panel.Children.Add(new TextBlock { Text = "파일 변환, 손끝에서.", FontSize = 28, FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 24) });
+        foreach (string line in new[] { "1   탐색기에서 파일 하나를 선택하세요.", "2   왼쪽 Alt를 잠깐 꾹 누르세요.", "3   원하는 형식 위에서 Alt를 놓으세요." }) panel.Children.Add(new TextBlock { Text = line, FontSize = 16, Margin = new Thickness(0, 0, 0, 16) });
+        panel.Children.Add(new TextBlock { Text = "가운데나 바깥에서 놓으면 취소돼요.\n원본은 그대로, 결과는 같은 폴더에 저장돼요.", FontSize = 13, Foreground = Brushes.DimGray, Margin = new Thickness(0, 8, 0, 20) });
+        panel.Children.Add(new TextBlock { Text = "이미지 · PDF · Word · Excel · PowerPoint를 변환해요.\n문서 변환 기능은 앱 설치 때 함께 준비해요.\n파일은 외부로 보내지 않아요.", FontSize = 12, Foreground = Brushes.DimGray, TextWrapping = TextWrapping.Wrap });
+        var button = new Button { Content = "시작하기", Padding = new Thickness(18, 10, 18, 10), Margin = new Thickness(0, 24, 0, 0), HorizontalAlignment = HorizontalAlignment.Right };
+        button.Click += (_, _) => { settings.OnboardingShown = true; settings.Save(); guide?.Close(); };
+        panel.Children.Add(button);
+        guide = new Window { Title = "Morphy", Width = 490, SizeToContent = SizeToContent.Height, ResizeMode = ResizeMode.NoResize, WindowStartupLocation = WindowStartupLocation.CenterScreen, Content = panel, Background = Brushes.White };
+        guide.Closed += (_, _) => guide = null;
+        guide.Show();
+    }
+    private async void Enqueue(string source, OutputFormat format)
+    {
+        if (maintenance) return;
+        try
+        {
+        Conversion.CheckInput(source);
+        if (Conversion.NeedsEngine(source, format) && EngineInstaller.Find() == null && !await EnsureEngine()) return;
+        string folder = Path.GetDirectoryName(source)!;
+        try
+        {
+            string probe = Path.Combine(folder, $".morphy-probe-{Guid.NewGuid():N}");
+            using var stream = new FileStream(probe, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1, FileOptions.DeleteOnClose);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            using var picker = new Forms.FolderBrowserDialog { Description = "원본 폴더에 저장할 수 없어요. 결과를 저장할 폴더를 선택해 주세요.", UseDescriptionForTitle = true };
+            if (picker.ShowDialog() != Forms.DialogResult.OK) return;
+            folder = picker.SelectedPath;
+        }
+        jobs.Add(new Job(source, format, folder));
+        Refresh(); _ = Pump();
+        }
+        catch (Exception e) { MessageBox.Show(e.Message, "Morphy", MessageBoxButton.OK, MessageBoxImage.Error); }
+    }
+    private async Task Pump()
+    {
+        if (running) return;
+        running = true;
+        try
+        {
+            while (jobs.FirstOrDefault(j => j.State == "대기") is { } job)
+            {
+                job.State = "변환 중"; Refresh();
+                currentCancellation = new CancellationTokenSource();
+                try
+                {
+                    job.Results = await ConversionWorker.Run(job.Source, job.Format, job.Destination, currentCancellation.Token);
+                    job.State = "완료";
+                    tray.ShowBalloonTip(4000, "변환 완료", job.Results.Length == 1 ? Path.GetFileName(job.Results[0]) : $"{job.Results.Length}개 파일을 저장했어요.", Forms.ToolTipIcon.Info);
+                }
+                catch (OperationCanceledException) { job.State = "취소됨"; }
+                catch (Exception e)
+                {
+                    job.State = "실패"; job.Error = e.Message; Settings.Log(e.ToString());
+                    tray.ShowBalloonTip(6000, "파일을 변환하지 못했어요", e.Message, Forms.ToolTipIcon.Error);
+                }
+                finally { currentCancellation.Dispose(); currentCancellation = null; }
+                Refresh();
+            }
+        }
+        finally { running = false; Refresh(); }
+    }
+    private static Task<T> RunSta<T>(Func<T> action)
+    {
+        var completion = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var thread = new System.Threading.Thread(() => { try { completion.SetResult(action()); } catch (Exception e) { completion.SetException(e); } });
+        thread.SetApartmentState(System.Threading.ApartmentState.STA); thread.IsBackground = true; thread.Start();
+        return completion.Task;
+    }
+    private void Refresh()
+    {
+        var menu = new Forms.ContextMenuStrip();
+        menu.Items.Add("Morphy " + Updates.Current).Enabled = false;
+        menu.Items.Add("사용 방법", null, (_, _) => ShowGuide());
+        menu.Items.Add(new Forms.ToolStripSeparator());
+        foreach (var job in jobs.TakeLast(20))
+        {
+            var item = new Forms.ToolStripMenuItem($"{job.State} · {Path.GetFileName(job.Source)} → {job.Format.Name}");
+            if (job.Results.Length > 0)
+            {
+                item.DropDownItems.Add("열기", null, (_, _) => { foreach (string output in job.Results) Launch(output); });
+                item.DropDownItems.Add("탐색기에서 보기", null, (_, _) => Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{job.Results[0]}\"") { UseShellExecute = true }));
+            }
+            if (job.State == "실패")
+            {
+                item.DropDownItems.Add(job.Error).Enabled = false;
+                item.DropDownItems.Add("다시 시도", null, (_, _) => { job.State = "대기"; _ = Pump(); });
+            }
+            menu.Items.Add(item);
+        }
+        if (running) menu.Items.Add("변환 모두 취소", null, (_, _) => { foreach (var job in jobs.Where(j => j.State == "대기")) job.State = "취소됨"; currentCancellation?.Cancel(); Refresh(); });
+        if (jobs.Count > 0) menu.Items.Add("완료 목록 지우기", null, (_, _) => { jobs.RemoveAll(j => j.State is "완료" or "실패" or "취소됨"); Refresh(); });
+        if (EngineInstaller.Find() == null) menu.Items.Add("문서 변환 기능 추가…", null, async (_, _) => await EnsureEngine());
+        else menu.Items.Add("문서 변환 기능 켜짐").Enabled = false;
+        if (Directory.Exists(EngineInstaller.Managed))
+        {
+            var remove = menu.Items.Add("문서 변환 기능 삭제…", null, (_, _) =>
+            {
+                if (MessageBox.Show("문서 변환 기능을 휴지통으로 옮길까요? 나중에 다시 추가할 수 있어요.", "Morphy", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
+                try { EngineInstaller.Remove(); Refresh(); } catch (Exception e) { MessageBox.Show(e.Message, "Morphy"); }
+            }); remove.Enabled = !running && engineTask == null;
+        }
+        var update = menu.Items.Add("업데이트 확인…", null, async (_, _) => await CheckUpdates(true)); update.Enabled = !running && !maintenance && engineTask == null;
+        var shortcut = new Forms.ToolStripMenuItem("왼쪽 Alt로 메뉴 열기") { Checked = settings.TriggerEnabled };
+        shortcut.Click += (_, _) => { settings.TriggerEnabled = !settings.TriggerEnabled; settings.Save(); trigger.Close(); Refresh(); };
+        menu.Items.Add(shortcut);
+        var startup = new Forms.ToolStripMenuItem("로그인 시 실행") { Checked = Settings.AutoStart };
+        startup.Click += (_, _) => { try { Settings.AutoStart = !Settings.AutoStart; Refresh(); } catch (Exception e) { MessageBox.Show(e.Message, "Morphy"); } };
+        menu.Items.Add(startup);
+        menu.Items.Add("로그 폴더 열기", null, (_, _) => { Directory.CreateDirectory(Settings.DirectoryPath); Launch(Settings.DirectoryPath); });
+        menu.Items.Add(new Forms.ToolStripSeparator());
+        var exit = menu.Items.Add(running ? "변환 중에는 종료할 수 없어요" : "Morphy 종료", null, (_, _) => Application.Current.Shutdown());
+        exit.Enabled = !running && !maintenance && engineTask == null;
+        var previous = tray.ContextMenuStrip; tray.ContextMenuStrip = menu;
+        if (previous != null) Application.Current.Dispatcher.BeginInvoke(previous.Dispose, DispatcherPriority.Background);
+    }
+    private static void Launch(string path) { try { Process.Start(new ProcessStartInfo(path) { UseShellExecute = true }); } catch (Exception e) { MessageBox.Show(e.Message, "Morphy"); } }
+    private async Task<bool> EnsureEngine()
+    {
+        if (engineTask != null) return await engineTask;
+        if (MessageBox.Show("문서 변환 기능을 추가할까요? 약 375MB를 내려받고 2GB의 여유 공간이 필요해요.\n\nLibreOffice (The Document Foundation, MPL-2.0)를 공식 서버에서 받아 사용해요. 파일은 업로드하지 않아요.", "Morphy", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return false;
+        engineTask = InstallEngine(); Refresh();
+        try { return await engineTask; } finally { engineTask = null; Refresh(); }
+    }
+    private async Task<bool> InstallEngine()
+    {
+        using var cancel = new CancellationTokenSource(); var window = new OperationWindow("문서 변환 기능 추가", cancel); window.Show();
+        try { await EngineInstaller.Install(new Progress<(string Stage, double Fraction)>(p => window.Update(p.Stage, p.Fraction)), cancel.Token); return true; }
+        catch (OperationCanceledException) { return false; }
+        catch (Exception e) { Settings.Log(e.ToString()); MessageBox.Show(e.Message, "Morphy", MessageBoxButton.OK, MessageBoxImage.Error); return false; }
+        finally { window.Finish(); }
+    }
+    private async Task CheckUpdates(bool interactive)
+    {
+        try
+        {
+            var update = await Updates.Check(CancellationToken.None);
+            if (update == null) { if (interactive) MessageBox.Show("현재 사용할 수 있는 새 Windows 버전이 없어요.", "Morphy"); return; }
+            if (!interactive) { tray.ShowBalloonTip(5000, "Morphy 업데이트", $"{update.Version} 버전이 있어요. 트레이 메뉴에서 업데이트할 수 있어요.", Forms.ToolTipIcon.Info); return; }
+            if (running || maintenance || engineTask != null) return;
+            if (MessageBox.Show($"Morphy {update.Version} 버전을 내려받고 설치할까요? 설치가 끝나면 앱을 다시 열어요.", "Morphy 업데이트", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
+            maintenance = true; trigger.Close(); Refresh(); using var cancel = new CancellationTokenSource();
+            var window = new OperationWindow("업데이트 다운로드", cancel); window.Show();
+            try
+            {
+                string setup = await Updates.Download(update, new Progress<double>(p => window.Update("내려받는 중", p)), cancel.Token);
+                window.Finish(); Updates.Install(setup); Application.Current.Shutdown();
+            }
+            finally { window.Finish(); maintenance = false; Refresh(); }
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception e) { Settings.Log("Update: " + e); if (interactive) MessageBox.Show("업데이트를 확인하거나 설치하지 못했어요.\n" + e.Message, "Morphy"); }
+    }
+    public void Dispose() { control.Dispose(); trigger.Dispose(); guide?.Close(); tray.Visible = false; tray.ContextMenuStrip?.Dispose(); tray.Icon?.Dispose(); tray.Dispose(); }
+}
