@@ -505,7 +505,8 @@ html:not(.phone) .phone-only { display: none !important; }
   <div class="frow s" style="--d:.25s"><b><i class="badge" style="background:#2b5fcc">W</i>Word</b><span>PDF · DOCX</span></div>
   <div class="frow s" style="--d:.375s"><b><i class="badge" style="background:#1f8f4e">X</i>Excel</b><span>PDF · XLSX · CSV</span></div>
   <div class="frow s" style="--d:.5s"><b><i class="badge" style="background:#d9442b">P</i>PowerPoint</b><span>PDF · PPTX</span></div>
-  <p class="note s" style="--d:.625s">Markdown은 HTML로도 변환해요.</p>
+  <div class="frow s" style="--d:.5625s"><b><i class="badge" style="background:#555;font-size:9px">&lt;/&gt;</i>웹페이지</b><span>HTML → PDF · JPG</span></div>
+  <p class="note s" style="--d:.625s">Markdown은 HTML로도 변환해요. 웹페이지 안의 외부 이미지·글꼴은 불러오지 않아요.</p>
   <div class="callout r" style="--d:.75s">
     <svg class="doc" viewBox="0 0 64 80"><path d="M4 4h36l20 20v52H4z" fill="none" stroke="#141414" stroke-width="3" stroke-linejoin="round"/><path d="M40 4v20h20" fill="none" stroke="#141414" stroke-width="3" stroke-linejoin="round"/><path d="M44 50v20M34 60h20" stroke="var(--orange)" stroke-width="4" stroke-linecap="round"/></svg>
     <strong><span class="os-mac">필요한 기능만 가볍게.</span><span class="os-win">설치 한 번이면 끝.</span></strong>
@@ -537,7 +538,7 @@ html:not(.phone) .phone-only { display: none !important; }
   <div class="sec-head"><h2 class="r">자주 묻는 질문</h2></div>
   <details class="r"><summary>무료인가요?</summary><p>네, 무료예요. 소스 코드도 <a href="https://github.com/tpals0409/Morphy">GitHub</a>에 MIT 라이선스로 공개돼 있어요.</p></details>
   <details class="r" style="--d:.0625s"><summary>파일이 외부로 나가나요?</summary><p>아니요. 변환은 모두 내 컴퓨터 안에서 해요. 결과는 원본과 같은 폴더에 새 파일로 저장되고, 같은 이름이 있으면 "보고서 (1).pdf"처럼 번호를 붙여요.</p></details>
-  <details class="r" style="--d:.125s"><summary>인터넷이 없어도 되나요?</summary><p>변환에는 인터넷이 필요 없어요. 앱과 문서 변환 기능을 처음 받을 때, 그리고 업데이트를 확인할 때만 연결해요.</p></details>
+  <details class="r" style="--d:.125s"><summary>인터넷이 없어도 되나요?</summary><p>변환에는 인터넷이 필요 없어요. 웹페이지(HTML)를 바꿀 때도 외부 자료는 불러오지 않고, 같은 폴더의 파일만 써요. 앱과 문서 변환 기능을 처음 받을 때, 그리고 업데이트를 확인할 때만 연결해요.</p></details>
   <details class="r" style="--d:.1875s"><summary>여러 파일을 한 번에 바꿀 수 있나요?</summary><p>지금은 한 번에 파일 하나만 바꿀 수 있어요. 파일을 여러 개 고르면 메뉴가 열리지 않아요.</p></details>
   <details class="r" style="--d:.25s"><summary>Intel Mac에서도 되나요?</summary><p>아니요. Apple Silicon(M1 이후) Mac과 macOS 14 이상에서만 동작해요. Windows는 Windows 11 64비트에서 동작해요.</p></details>
   <details class="r" style="--d:.3125s"><summary>왜 보안 경고가 뜨나요?</summary><p>아직 Apple 공증과 Windows 코드 서명을 받지 않아서예요. 준비하고 있고, 받으면 경고 없이 열려요. 진행 상황은 <a href="/code-signing">코드 서명 정책</a>에 있어요.</p></details>

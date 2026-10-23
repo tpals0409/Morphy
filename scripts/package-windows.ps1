@@ -16,7 +16,7 @@ $project = Join-Path $repo 'windows\Morphy.Windows\Morphy.Windows.csproj'
 if ($LASTEXITCODE -ne 0) { throw 'Restore failed' }
 & $sdk publish $project -c Release -r win-x64 --self-contained true --no-restore -p:Version=$Version -o $app --nologo
 if ($LASTEXITCODE -ne 0) { throw 'App publish failed' }
-foreach ($native in @('Magick.Native-Q8-x64.dll', 'pdfium.dll', 'libSkiaSharp.dll', 'libHarfBuzzSharp.dll', 'wic_heic.dll')) {
+foreach ($native in @('Magick.Native-Q8-x64.dll', 'pdfium.dll', 'libSkiaSharp.dll', 'libHarfBuzzSharp.dll', 'wic_heic.dll', 'WebView2Loader.dll')) {
     if (!(Test-Path -LiteralPath (Join-Path $app $native))) { throw "Published native dependency is missing: $native" }
 }
 if ($CertificateThumbprint) {

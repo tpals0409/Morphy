@@ -81,6 +81,22 @@ internal static class SelfTest
             File.WriteAllText(svg, "<svg xmlns=\"http://www.w3.org/2000/svg\"><image href=\"https://example.com/secret.png\"/></svg>");
             rejected = false; try { Conversion.Run(svg, Conversion.Formats[0], root); } catch { rejected = true; }
             Check(rejected, "External SVG resources must be rejected");
+            // HTML → PDF/JPG through WebView2: layout, scripts, local image, page break, no network (D11).
+            string html = Path.Combine(root, "웹 페이지.html");
+            File.Copy(source, Path.Combine(root, "local.png"), true);
+            File.WriteAllText(html, "<!doctype html><html lang=\"ko\"><head><meta charset=\"utf-8\"><style>.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.card{background:#f47b55;padding:16px}h2{break-before:page}</style></head><body><h1>웹 페이지 변환</h1><p id=\"js\">스크립트 전</p><p id=\"net\">확인 중</p><div class=\"grid\"><div class=\"card\">하나</div><div class=\"card\">둘</div><div class=\"card\">셋</div></div><img src=\"local.png\" width=\"64\"><img src=\"https://www.microsoft.com/favicon.ico\" width=\"1\" onload=\"document.getElementById('net').textContent='외부 연결됨'\" onerror=\"document.getElementById('net').textContent='외부 차단됨'\"><h2>둘째 쪽</h2><p>새 페이지에서 시작해요.</p><script>document.getElementById('js').textContent='스크립트가 바꾼 문장';</script></body></html>");
+            Check(Conversion.Outputs(html).Select(f => f.Extension).SequenceEqual(new[] { "pdf", "jpg" }), "HTML offers PDF and JPG");
+            Check(Conversion.Outputs("page.htm").Length == 2, ".htm is HTML too");
+            string webPdf = Conversion.Run(html, Conversion.Formats.Single(f => f.Extension == "pdf"), root);
+            using (var pdf = new PdfEngine(webPdf))
+            {
+                string text = pdf.Text();
+                Check(pdf.PageCount == 2, "HTML PDF must keep the CSS page break, pages: " + pdf.PageCount);
+                Check(text.Contains("스크립트가 바꾼 문장") && text.Contains("하나"), "HTML PDF must include script output and Korean text");
+                Check(text.Contains("외부 차단됨"), "HTML PDF: network must be blocked: " + text);
+            }
+            string webJpg = Conversion.Run(html, Conversion.Formats.Single(f => f.Extension == "jpg"), root);
+            using (var shot = Conversion.ReadImage(webJpg)) Check(shot.Width == 2 * WebEngine.Width && shot.Height > shot.Width / 2, $"HTML JPG must be the whole page at 2x, got {shot.Width}x{shot.Height}");
             string cp949 = Path.Combine(root, "cp949.txt");
             System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
             File.WriteAllBytes(cp949, System.Text.Encoding.GetEncoding(949).GetBytes("한글 공백 검증"));

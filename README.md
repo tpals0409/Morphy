@@ -37,9 +37,11 @@
 | DOCX, DOC, ODT, RTF, TXT, Markdown | PDF, DOCX. Markdown은 HTML도 |
 | XLSX, XLS, ODS, CSV | PDF, XLSX, CSV. 시트가 여러 개면 시트마다 CSV |
 | PPTX, PPT, ODP | PDF, PPTX |
+| HTML | PDF(A4), JPG(페이지 전체 한 장) |
 
 - WEBP로 **저장**은 `cwebp`가 설치된 Mac에서만 "더 보기"에 나와요. WEBP 파일을 JPG·PNG로 바꾸는 건 모든 Mac에서 돼요.
 - 원본과 같은 형식은 메뉴에 나오지 않아요.
+- HTML은 Mac은 Safari, Windows는 Edge와 같은 엔진으로 그려요. 외부 이미지·글꼴·스크립트는 불러오지 않고, HTML이 있는 폴더의 파일만 써요.
 - 지원하지 않는 파일이나 여러 파일을 선택하면 메뉴가 뜨지 않아요.
 
 ## 안전하게
@@ -112,6 +114,7 @@ build/Morphy.app/Contents/MacOS/Morphy --selftest /tmp/corpus
 | `Sources/Morphy/Trigger.swift` | Option 꾹 누르기 감지, Finder 선택 읽기 |
 | `Sources/Morphy/RadialMenu.swift` | 도넛 메뉴, 브랜드 색, 선택과 취소 |
 | `Sources/Morphy/Convert.swift` | 형식과 경로, 입력 확인, 이미지·PDF·문서 변환, 안전 저장 |
+| `Sources/Morphy/WebPage.swift` | HTML → PDF·JPG (WebKit, 외부 연결 차단) |
 | `Sources/Morphy/Updater.swift` | 메뉴바의 업데이트 확인과 설치 |
 | `Sources/Morphy/EngineInstaller.swift` | 문서 변환 기능 내려받기와 확인, 설치 |
 | `Sources/Morphy/App.swift` | 메뉴바, 작업 대기열, 알림 |

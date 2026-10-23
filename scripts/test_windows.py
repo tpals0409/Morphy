@@ -26,9 +26,19 @@ env = dict(os.environ, MORPHY_ENGINE_PATH=str(Path(args.engine).resolve()))
 routes = {"docx": ["pdf"], "doc": ["pdf", "docx"], "odt": ["pdf", "docx"], "rtf": ["pdf", "docx"],
           "txt": ["pdf", "docx"], "md": ["pdf", "docx", "html"], "xlsx": ["pdf", "csv"],
           "xls": ["pdf", "xlsx", "csv"], "ods": ["pdf", "xlsx", "csv"], "csv": ["pdf", "xlsx"],
-          "pptx": ["pdf"], "ppt": ["pdf", "pptx"], "odp": ["pdf", "pptx"]}
+          "pptx": ["pdf"], "ppt": ["pdf", "pptx"], "odp": ["pdf", "pptx"], "html": ["pdf", "jpg"]}
 results = []
 pdfs = []
+
+def jpeg_size(data):
+    """Width and height from the first JPEG start-of-frame marker."""
+    i = 2
+    while i < len(data):
+        marker, length = data[i + 1], int.from_bytes(data[i + 2:i + 4], "big")
+        if marker in (0xC0, 0xC1, 0xC2):
+            return int.from_bytes(data[i + 7:i + 9], "big"), int.from_bytes(data[i + 5:i + 7], "big")
+        i += 2 + length
+    raise AssertionError("not a JPEG")
 
 def convert(source, target, case):
     destination = output / case
@@ -51,6 +61,18 @@ def convert(source, target, case):
                 assert any("가" <= c <= "힣" for c in text), f"Korean text missing: {text[:100]}"
                 assert pdf.pages[0].mediabox.width > 0
             pdfs.append(file)
+    if source.suffix.lower() == ".html":
+        # Drawn by WebView2: page break kept, scripts ran, network blocked, JPG is the whole page at 2x.
+        for file in files:
+            if target == "pdf":
+                with file.open('rb') as stream:
+                    pdf = PdfReader(stream)
+                    text = "".join(page.extract_text() for page in pdf.pages)
+                assert len(pdf.pages) == 2, f"HTML PDF pages: {len(pdf.pages)}"
+                assert "스크립트가 바꾼 문장" in text and "외부 차단됨" in text, f"HTML PDF text: {text[:200]}"
+            elif target == "jpg":
+                width, height = jpeg_size(file.read_bytes())
+                assert width == 2048 and height > 1024, f"HTML JPG size: {width}x{height}"
     if source.suffix.lower() == ".md":
         # Markdown tables must come out as tables, never as literal "| a | b |" text.
         for file in files:
