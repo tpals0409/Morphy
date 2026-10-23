@@ -36,6 +36,10 @@ internal static class SelfTest
             Check(RadialMenu.Hit(-82, -48) == 5, "Upper-left slot");
             Check(!Conversion.Outputs("test.JPEG").Any(f => f.Extension == "jpg"), "Alias exclusion");
             Check(Conversion.Outputs("test.exe").Length == 0, "Unsupported input");
+            Check(OfficeEngine.SeparateTables("설명입니다.\n| 월 | 매출 |\n|---|---:|\n| 1월 | 100 |") == "설명입니다.\n\n| 월 | 매출 |\n|---|---:|\n| 1월 | 100 |", "Markdown table under text gets a blank line");
+            Check(OfficeEngine.SeparateTables("글\r\n월 | 매출\r\n---|---\r\n1월 | 100\r\n").Contains("글\r\n\n월 | 매출"), "Markdown table without outer pipes, CRLF");
+            foreach (string unchanged in new[] { "# 제목\n\n| a | b |\n|---|---|\n| 1 | 2 |", "```\ncode\n| a | b |\n|---|---|\n```", "a | b 는 표가 아니에요\n다음 줄" })
+                Check(OfficeEngine.SeparateTables(unchanged) == unchanged, "Markdown left alone: " + unchanged);
             var frame = BitmapSource.Create(2, 2, 96, 96, PixelFormats.Bgra32, null, new byte[] { 0, 0, 255, 255, 0, 255, 0, 255, 255, 0, 0, 255, 0, 0, 0, 0 }, 8);
             string source = Path.Combine(root, "한글 원본.png");
             var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(frame));

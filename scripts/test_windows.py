@@ -5,6 +5,7 @@ import json
 import os
 import subprocess
 import uuid
+import zipfile
 from pathlib import Path
 
 from pypdf import PdfReader
@@ -50,6 +51,19 @@ def convert(source, target, case):
                 assert any("가" <= c <= "힣" for c in text), f"Korean text missing: {text[:100]}"
                 assert pdf.pages[0].mediabox.width > 0
             pdfs.append(file)
+    if source.suffix.lower() == ".md":
+        # Markdown tables must come out as tables, never as literal "| a | b |" text.
+        for file in files:
+            if target == "html":
+                html = file.read_text(encoding="utf-8")
+                assert "<table" in html and "|---" not in html, "Markdown table missing in HTML"
+            elif target == "docx":
+                with zipfile.ZipFile(file) as docx:
+                    assert "<w:tbl>" in docx.read("word/document.xml").decode("utf-8"), "Markdown table missing in DOCX"
+            elif target == "pdf":
+                with file.open('rb') as stream:
+                    text = "".join(page.extract_text() for page in PdfReader(stream).pages)
+                assert "|---" not in text and "| " not in text, "Markdown table printed as pipe text in PDF"
     if target == "csv":
         assert all("�" not in file.read_text(encoding="utf-8-sig") for file in files)
         # utf-8-sig reads with or without a BOM; Korean Excel needs it, so require it explicitly.

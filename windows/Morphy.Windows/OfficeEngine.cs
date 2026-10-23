@@ -18,8 +18,30 @@ internal static class OfficeEngine
         try { return new UTF8Encoding(false, true).GetString(data).TrimStart('\uFEFF'); }
         catch (DecoderFallbackException) { Encoding.RegisterProvider(CodePagesEncodingProvider.Instance); return Encoding.GetEncoding(949, EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback).GetString(data); }
     }
+    // A table right under a line of text is a table on GitHub, but not to stricter Markdown parsers. Add the blank
+    // line before a table header (outside fenced code) so it always converts as a table, as the Mac app does.
+    internal static string SeparateTables(string text)
+    {
+        var delimiter = new Regex(@"^\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?$");
+        string[] lines = text.Split('\n');
+        var output = new System.Collections.Generic.List<string>();
+        bool fenced = false;
+        for (int i = 0; i < lines.Length; i++)
+        {
+            string trimmed = lines[i].Trim();
+            if (trimmed.StartsWith("```") || trimmed.StartsWith("~~~")) fenced = !fenced;
+            if (!fenced && trimmed.Contains('|') && i + 1 < lines.Length && output.Count > 0 && output[output.Count - 1].Trim().Length > 0)
+            {
+                string next = lines[i + 1].Trim();
+                if (next.Contains('|') && delimiter.IsMatch(next)) output.Add("");
+            }
+            output.Add(lines[i]);
+        }
+        return string.Join("\n", output);
+    }
     private static string MarkdownHtml(string text)
     {
+        text = SeparateTables(text);
         string html = Markdown.ToHtml(text, new MarkdownPipelineBuilder().UseAdvancedExtensions().DisableHtml().Build());
         html = Regex.Replace(html, "<img\\b[^>]*>", "", RegexOptions.IgnoreCase);
         return "<!doctype html><html><head><meta charset=\"utf-8\"><style>body{font-family:'Malgun Gothic',sans-serif;line-height:1.6}table{border-collapse:collapse}td,th{border:1px solid #aaa;padding:6px}pre{white-space:pre-wrap}</style></head><body>" + html + "</body></html>";

@@ -62,6 +62,8 @@ csv = "이름,금액,메모\n홍길동,1000,\"쉼표, 포함\"\n김철수,2500,�
 (out / "명단 utf8.csv").write_text(csv, encoding="utf-8")
 (out / "명단 cp949.csv").write_bytes(csv.encode("cp949"))
 (out / "메모 cp949.txt").write_bytes("한글 텍스트 파일입니다.\n두 번째 줄.\n".encode("cp949"))
+# A table right under a line of text: GitHub renders it as a table, strict parsers don't without the fix.
+(out / "표 바로 아래.md").write_text("# 분기 보고\n설명 문장 바로 아래에 표가 있어요.\n| 월 | 매출 |\n|---|---:|\n| 1월 | 100 |\n| 2월 | 120 |\n", encoding="utf-8")
 (out / "README 한글.md").write_text("# 마크다운 제목\n\n- 목록 **굵게**\n- 두 번째\n\n| 이름 | 값 |\n|---|---|\n| 가 | 1 |\n\n```\ncode 블록\n```\n", encoding="utf-8")
 
 # Legacy/ODF inputs, made by LibreOffice itself from the files above.
