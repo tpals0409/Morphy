@@ -36,7 +36,7 @@ internal sealed class TrayApp : IDisposable
     internal TrayApp(bool smoke = false, bool checkUpdates = false)
     {
         tray = new Forms.NotifyIcon { Text = "Morphy " + Updates.Current, Icon = CreateIcon(), Visible = true };
-        trigger = new ShortcutTrigger(() => settings.TriggerEnabled && !maintenance) { Convert = Enqueue };
+        trigger = new ShortcutTrigger(() => !maintenance) { Convert = Enqueue };
         control = new ControlServer(() => !running && !maintenance && engineTask == null, () => _ = CheckUpdates(true));
         tray.MouseClick += (_, e) => { if (e.Button == Forms.MouseButtons.Left) ShowGuide(); };
         Refresh();
@@ -79,6 +79,13 @@ internal sealed class TrayApp : IDisposable
         foreach (string line in new[] { "1   탐색기에서 파일 하나를 선택하세요.", "2   Ctrl+Alt를 누른 채 원하는 형식으로 이동하세요.", "3   Ctrl 또는 Alt에서 손을 떼면 변환돼요." }) panel.Children.Add(new TextBlock { Text = line, FontSize = 16, Margin = new Thickness(0, 0, 0, 16) });
         panel.Children.Add(new TextBlock { Text = "가운데나 바깥에서 놓으면 취소돼요. Esc로도 취소할 수 있어요.\n클릭이나 방향키·Enter로도 실행할 수 있어요.\n원본은 그대로, 결과는 같은 폴더에 저장돼요.", FontSize = 13, Foreground = Brushes.DimGray, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 20) });
         panel.Children.Add(new TextBlock { Text = "이미지 · PDF · Word · Excel · PowerPoint를 변환해요.\n설치가 끝나면 모든 변환 기능을 바로 사용할 수 있어요.\n파일은 외부로 보내지 않아요.", FontSize = 12, Foreground = Brushes.DimGray, TextWrapping = TextWrapping.Wrap });
+        var logs = new Button { Content = "진단 로그 열기", Margin = new Thickness(0, 16, 0, 0), Padding = new Thickness(10, 6, 10, 6), HorizontalAlignment = HorizontalAlignment.Left };
+        logs.Click += (_, _) =>
+        {
+            try { Directory.CreateDirectory(Settings.DirectoryPath); Launch(Settings.DirectoryPath); }
+            catch (Exception e) { MessageBox.Show(e.Message, "Morphy"); }
+        };
+        panel.Children.Add(logs);
         var button = new Button { Content = "시작하기", Padding = new Thickness(18, 10, 18, 10), Margin = new Thickness(0, 24, 0, 0), HorizontalAlignment = HorizontalAlignment.Right };
         button.Click += (_, _) => { settings.OnboardingShown = true; settings.Save(); guide?.Close(); };
         panel.Children.Add(button);
@@ -153,42 +160,11 @@ internal sealed class TrayApp : IDisposable
         menu.Items.Add("사용 방법", null, (_, _) => ShowGuide());
         var update = menu.Items.Add("업데이트 확인…", null, async (_, _) => await CheckUpdates(true)); update.Enabled = !checkingUpdate && !running && !maintenance && engineTask == null;
         menu.Items.Add(new Forms.ToolStripSeparator());
-        foreach (var job in jobs.TakeLast(20))
-        {
-            var item = new Forms.ToolStripMenuItem($"{job.State} · {Path.GetFileName(job.Source)} → {job.Format.Name}");
-            if (job.Results.Length > 0)
-            {
-                item.DropDownItems.Add("열기", null, (_, _) => { foreach (string output in job.Results) Launch(output); });
-                item.DropDownItems.Add("탐색기에서 보기", null, (_, _) => Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{job.Results[0]}\"") { UseShellExecute = true }));
-            }
-            if (job.State == "실패")
-            {
-                item.DropDownItems.Add(job.Error).Enabled = false;
-                item.DropDownItems.Add("다시 시도", null, (_, _) => { job.State = "대기"; _ = Pump(); });
-            }
-            menu.Items.Add(item);
-        }
-        if (running) menu.Items.Add("변환 모두 취소", null, (_, _) => { foreach (var job in jobs.Where(j => j.State == "대기")) job.State = "취소됨"; currentCancellation?.Cancel(); Refresh(); });
-        if (jobs.Count > 0) menu.Items.Add("완료 목록 지우기", null, (_, _) => { jobs.RemoveAll(j => j.State is "완료" or "실패" or "취소됨"); Refresh(); });
-        if (EngineInstaller.Find() == null) menu.Items.Add("문서 변환 기능 추가…", null, async (_, _) => await EnsureEngine());
-        else menu.Items.Add("문서 변환 기능 켜짐").Enabled = false;
-        if (Directory.Exists(EngineInstaller.Managed))
-        {
-            var remove = menu.Items.Add("문서 변환 기능 삭제…", null, (_, _) =>
-            {
-                if (MessageBox.Show("문서 변환 기능을 휴지통으로 옮길까요? 나중에 다시 추가할 수 있어요.", "Morphy", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
-                try { EngineInstaller.Remove(); Refresh(); } catch (Exception e) { MessageBox.Show(e.Message, "Morphy"); }
-            }); remove.Enabled = !running && engineTask == null;
-        }
-        var shortcut = new Forms.ToolStripMenuItem("Ctrl+Alt로 메뉴 열기") { Checked = settings.TriggerEnabled };
-        shortcut.Click += (_, _) => { settings.TriggerEnabled = !settings.TriggerEnabled; settings.Save(); trigger.Close(); Refresh(); };
-        menu.Items.Add(shortcut);
         var startup = new Forms.ToolStripMenuItem("로그인 시 실행") { Checked = Settings.AutoStart };
         startup.Click += (_, _) => { try { Settings.AutoStart = !Settings.AutoStart; Refresh(); } catch (Exception e) { MessageBox.Show(e.Message, "Morphy"); } };
         menu.Items.Add(startup);
-        menu.Items.Add("로그 폴더 열기", null, (_, _) => { Directory.CreateDirectory(Settings.DirectoryPath); Launch(Settings.DirectoryPath); });
         menu.Items.Add(new Forms.ToolStripSeparator());
-        var exit = menu.Items.Add(running ? "변환 중에는 종료할 수 없어요" : "Morphy 종료", null, (_, _) => Application.Current.Shutdown());
+        var exit = menu.Items.Add("Morphy 종료", null, (_, _) => Application.Current.Shutdown());
         exit.Enabled = !running && !maintenance && engineTask == null;
         var previous = tray.ContextMenuStrip; tray.ContextMenuStrip = menu;
         if (previous != null) Application.Current.Dispatcher.BeginInvoke(previous.Dispose, DispatcherPriority.Background);
