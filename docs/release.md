@@ -69,6 +69,31 @@ python3 scripts/publish-release.py --dmg build/Morphy-<버전>.dmg --publish
 - 게시하면 설치된 Morphy가 메뉴바 메뉴에 "업데이트 설치"를 보여 준다(DECISIONS.md D9). 새 DMG도 지금 앱과 같은 팀 인증서로 서명해야 업데이트가 받아들여진다.
 - 페이지나 Worker 코드는 main에 push하면 Cloudflare가 자동으로 배포한다. DMG는 git에 넣지 않는다.
 
+### 문의 양식
+
+상세페이지의 문의 양식은 `/api/feedback`으로 보내고, Worker가 `tpals0409/Morphy`에 공개 이슈를 만든다. 답장용 이메일은 이슈에 넣지 않고 D1 `feedback` 표에만 저장한다. 같은 IP에서 1분에 3번까지 받는다.
+
+처음 한 번 준비:
+
+1. GitHub → Settings → Developer settings → Fine-grained tokens에서 토큰을 만든다. Repository access는 `tpals0409/Morphy`만, 권한은 Issues: Read and write만 준다.
+2. 토큰을 Worker 비밀값으로 넣는다. 토큰은 프롬프트에 직접 붙여 넣고, 채팅이나 파일에 적지 않는다.
+
+```bash
+npx wrangler secret put GITHUB_TOKEN
+```
+
+3. D1에 `feedback` 표를 만든다.
+
+```bash
+npx wrangler d1 migrations apply morphy --remote
+```
+
+이슈에 "답장 이메일: 있음"이라고 적혀 있으면 주소는 이렇게 본다.
+
+```bash
+npx wrangler d1 execute morphy --remote --command "SELECT email FROM feedback WHERE issue_number = <이슈 번호>"
+```
+
 공증이 거절되면 `xcrun notarytool log <제출 ID> --keychain-profile morphy-notary`로 이유를 본다.
 
 ## 권한(entitlements)
