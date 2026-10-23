@@ -120,6 +120,16 @@ enum SelfTest {
         if case .failed = unwritable { check(true, "no folder → explicit failure") } else { check(false, "no folder → explicit failure") }
 
         engineChecks(dir, check)
+        let release = { (v: String, path: String, sha: String) in
+            Data(#"{"version":"\#(v)","path":"\#(path)","sha256":"\#(sha)","bytes":10}"#.utf8)
+        }
+        let sha = String(repeating: "a", count: 64)
+        check(Updater.parse(release("0.2.0", "/releases/Morphy-0.2.0.dmg", sha), current: "0.1.0")?.url.absoluteString
+              == "https://morphy.tpals0409dev.workers.dev/releases/Morphy-0.2.0.dmg", "update: newer release on our site accepted")
+        check(Updater.parse(release("0.1.0", "/releases/Morphy-0.1.0.dmg", sha), current: "0.1.0") == nil, "update: same version ignored")
+        check(Updater.parse(release("0.10.0", "/releases/Morphy-0.10.0.dmg", sha), current: "0.9.0") != nil, "update: versions compare as numbers")
+        check(Updater.parse(release("0.2.0", "https://evil.example/Morphy-0.2.0.dmg", sha), current: "0.1.0") == nil, "update: foreign path refused")
+        check(Updater.parse(release("0.2.0", "/releases/Morphy-0.2.0.dmg", "bad"), current: "0.1.0") == nil, "update: bad SHA-256 refused")
         print("Office engine:", Office.soffice?.path ?? "not installed (Office routes ask to download it)")
         // `--selftest <corpus dir>` (scripts/make_corpus.py output) also checks Office → PDF on real files.
         if let i = CommandLine.arguments.firstIndex(of: "--selftest"), i + 1 < CommandLine.arguments.count {

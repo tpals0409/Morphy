@@ -85,3 +85,13 @@ Replaces D5's "only a click runs". Opening (hold Option 0.15s, D6) and outside c
 - **Why not D2 again:** D2 selected by direction from where the menu opened, so a 30pt drift could pick a sector, and letting go then created files by accident. Now the selection is the sector physically under the pointer. The pointer starts in the 58pt hole and has to be moved onto the ring, and only real mouse moves select: a menu pushed in from a screen edge with the pointer already over a sector doesn't run on an immediate release.
 - **Why not D5:** the product owner found clicking while holding a key awkward on a trackpad.
 - **"더 보기":** letting go on it swaps in its ring and keeps the menu open (Option is up by then). That ring is used with clicks or arrows + Enter.
+
+## D9 · 2026-10-23 · Update from the menu bar menu
+
+Answers docs/release.md's open "앱 자동 업데이트" item without Sparkle.
+
+- **Now:** Morphy checks `https://morphy.tpals0409dev.workers.dev/api/release` at launch and every 6 hours. When the site has a higher version, the menu bar menu shows **"업데이트 설치 (0.1.0 → 0.2.0)…"**; otherwise it shows **"업데이트 확인 · 현재 0.1.0"**, which checks on click. Installing asks first, refuses while conversions or the engine download run, downloads the DMG, replaces the app where it is, and relaunches.
+- **Safety, same rules as the Windows app:** only a higher three-part version; only `/releases/Morphy-X.Y.Z.dmg` on our own site; the site's size and SHA-256; the new app must pass `codesign --verify --deep --strict` with the running app's TeamIdentifier, so Accessibility and Automation grants carry over and no one else's build can replace it; a Gatekeeper-approved install never accepts an update Gatekeeper refuses. Nothing in the DMG runs before the swap, and a failed check leaves the app untouched.
+- **Why not Sparkle:** it would add a framework, an EdDSA key to keep and an appcast to publish, while the website already serves the version, hash and file that the Windows updater uses.
+- **Limit:** the swap needs write access to the app's folder. A standard (non-admin) user with Morphy in /Applications gets an error asking to check permissions.
+- **Testing:** `Morphy --update -updateOrigin http://localhost:8787` runs the same check and install against `wrangler dev`.

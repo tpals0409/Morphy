@@ -66,6 +66,7 @@ python3 scripts/publish-release.py --dmg build/Morphy-<버전>.dmg --publish
 
 - R2에 DMG를 먼저 올리고 마지막에 D1에 줄을 넣는다. 그 순간부터 `/download`가 새 DMG를 가리킨다.
 - 이미 게시한 버전이면 아무것도 올리지 않고 멈춘다. 다시 내려면 버전을 올린다.
+- 게시하면 설치된 Morphy가 메뉴바 메뉴에 "업데이트 설치"를 보여 준다(DECISIONS.md D9). 새 DMG도 지금 앱과 같은 팀 인증서로 서명해야 업데이트가 받아들여진다.
 - 페이지나 Worker 코드는 main에 push하면 Cloudflare가 자동으로 배포한다. DMG는 git에 넣지 않는다.
 
 공증이 거절되면 `xcrun notarytool log <제출 ID> --keychain-profile morphy-notary`로 이유를 본다.
@@ -87,5 +88,4 @@ LibreOffice, `cwebp`, `pdftotext`는 별도 프로세스로 실행하므로 추�
 
 ## 아직 정하지 않은 것
 
-- **앱 자동 업데이트:** 웹 배포에는 App Store 업데이트가 없다. 업데이트 확인 기능이 필요하다(예: Sparkle, PRD 14·21).
 - **cwebp, pdftotext:** 지금은 Homebrew에서 찾는다. 다른 Mac에서는 WEBP 저장이 메뉴에 나오지 않고, PDF → TXT는 PDFKit으로 대신한다(띄어쓰기 품질이 떨어질 수 있다). libwebp를 앱에 넣고 PDFium으로 바꾸는 일은 별도로 진행한다.

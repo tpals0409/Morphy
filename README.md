@@ -25,6 +25,7 @@
 - 형식마다 칸 위치가 정해져 있어서, 익숙해지면 메뉴를 보지 않고도 고를 수 있어요.
 - 칸을 지날 때 트랙패드가 가볍게 진동해요.
 - 칸을 클릭해도 실행되고, Esc를 누르거나 도넛 바깥을 클릭하면 취소돼요. 바깥을 클릭해도 그 클릭은 Finder로 전달되지 않아요.
+- 새 버전이 나오면 메뉴바의 Morphy 아이콘을 눌렀을 때 "업데이트 설치"가 보여요. 누르면 내려받아 확인한 뒤 다시 시작해요.
 
 ## 바꿀 수 있는 형식
 
@@ -95,6 +96,7 @@ build/Morphy.app/Contents/MacOS/Morphy --selftest /tmp/corpus
 | `Morphy --convert <파일> <형식>` | 메뉴 없이 변환 하나를 실행 |
 | `Morphy --render-menu <폴더>` | 메뉴 모양을 PNG로 저장 (라이트, 다크, 더 보기) |
 | `Morphy --install-engine` | 문서 변환 기능을 명령줄에서 설치 |
+| `Morphy --update` | 메뉴 없이 업데이트를 확인하고 설치 |
 | `swift scripts/make_icon.swift` | `assets/icon-source.webp`로 앱 아이콘을 다시 만듦 |
 
 메뉴가 왜 안 뜨는지는 로그에서 볼 수 있어요.
@@ -110,6 +112,7 @@ build/Morphy.app/Contents/MacOS/Morphy --selftest /tmp/corpus
 | `Sources/Morphy/Trigger.swift` | Option 꾹 누르기 감지, Finder 선택 읽기 |
 | `Sources/Morphy/RadialMenu.swift` | 도넛 메뉴, 브랜드 색, 선택과 취소 |
 | `Sources/Morphy/Convert.swift` | 형식과 경로, 입력 확인, 이미지·PDF·문서 변환, 안전 저장 |
+| `Sources/Morphy/Updater.swift` | 메뉴바의 업데이트 확인과 설치 |
 | `Sources/Morphy/EngineInstaller.swift` | 문서 변환 기능 내려받기와 확인, 설치 |
 | `Sources/Morphy/App.swift` | 메뉴바, 작업 대기열, 알림 |
 | `Sources/Morphy/SelfTest.swift` | `--selftest` |

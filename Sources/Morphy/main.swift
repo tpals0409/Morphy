@@ -29,6 +29,22 @@ if CommandLine.arguments.count == 2, CommandLine.arguments[1] == "--install-engi
     }
     RunLoop.main.run()
 }
+// `--update`: the menu's update check and install without UI and without relaunching (`-updateOrigin <url>` to test).
+if CommandLine.arguments.count >= 2, CommandLine.arguments[1] == "--update" {
+    Task {
+        do {
+            guard let update = try await Updater.check() else { print("up to date", Updater.current); exit(0) }
+            print("installing", update.version, "over", Updater.current, "at", Bundle.main.bundlePath)
+            try await Updater.install(update)
+            print("installed", update.version)
+            exit(0)
+        } catch {
+            print("failed:", (error as? MorphyError)?.message ?? "\(error)")
+            exit(1)
+        }
+    }
+    RunLoop.main.run()
+}
 if CommandLine.arguments.count == 3, CommandLine.arguments[1] == "--render-menu" {
     RadialMenu.renderSnapshots(to: URL(fileURLWithPath: CommandLine.arguments[2]))
     exit(0)

@@ -181,7 +181,7 @@ final class EngineInstaller: NSObject, URLSessionDownloadDelegate {
         else { throw bad }
     }
 
-    private static func hash(_ url: URL) throws -> String {
+    static func hash(_ url: URL) throws -> String {
         let file = try FileHandle(forReadingFrom: url)
         defer { try? file.close() }
         var sha = SHA256()
