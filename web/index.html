@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Morphy · 변환 때문에 흐름이 끊기지 않도록</title>
-<meta name="description" content="Finder에서 파일을 고르고 Option을 꾹 누르면 커서 옆 도넛 메뉴에서 바로 변환해요. 업로드 없이, 내 Mac 안에서.">
+<meta name="description" content="Finder나 탐색기에서 파일을 고르고 단축키를 꾹 누르면 커서 옆 도넛 메뉴에서 바로 변환해요. 업로드 없이, 내 컴퓨터 안에서.">
+<script>/* 단축키 안내를 방문자 OS에 맞춰요: Windows는 Ctrl+Alt, 그 밖은 Mac의 Option. */ if (/Windows/i.test((navigator.userAgentData && navigator.userAgentData.platform) || navigator.userAgent)) document.documentElement.classList.add('win');</script>
 <meta property="og:title" content="Morphy">
 <meta property="og:description" content="파일 고르고, 꾹 누르고, 놓으면 끝. 하던 일은 계속. 변환은 Morphy.">
 <meta property="og:image" content="icon.png">
@@ -24,6 +25,7 @@
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 [hidden] { display: none !important; }
+html.win .os-mac, html:not(.win) .os-win { display: none !important; }
 html { background: var(--cream); color: var(--ink); font-family: "Pretendard Variable", Pretendard, -apple-system, system-ui, sans-serif; -webkit-font-smoothing: antialiased; scroll-behavior: smooth; }
 body { overflow-x: clip; }
 a { color: inherit; text-decoration: none; }
@@ -78,6 +80,8 @@ h1 { font-size: clamp(34px, 5.4vw, 70px); white-space: nowrap; position: relativ
 .titlebar i { width: 11px; height: 11px; border-radius: 50%; background: #ff5f57; }
 .titlebar i:nth-child(2) { background: #febc2e; }
 .titlebar i:nth-child(3) { background: #28c840; }
+.titlebar .os-win { margin-left: auto; display: flex; gap: 22px; padding-right: 18px; font-size: 13px; color: #555; }
+html.win .titlebar { background: #f3f3f3; }
 .sidebar { background: #f3f2ef; border-right: 1px solid var(--line); padding: 14px 10px; font-size: 12.5px; font-weight: 500; }
 .sidebar div { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 6px; color: #333; }
 .sidebar .sel { background: #dde8fb; }
@@ -116,7 +120,7 @@ h1 { font-size: clamp(34px, 5.4vw, 70px); white-space: nowrap; position: relativ
 .steps h3 { font-size: 20px; font-weight: 800; letter-spacing: -.02em; }
 .steps p { margin-top: 6px; font-size: 13px; color: var(--mute); }
 .keycap { perspective: 600px; }
-.key { display: grid; place-items: center; width: 128px; height: 92px; border: 2px solid var(--ink); border-radius: 14px; background: #fff; font-size: 20px; font-weight: 700; transform: rotateX(14deg); transform-origin: 50% 100%; box-shadow: 0 10px 0 var(--ink); }
+.key { display: grid; place-items: center; min-width: 128px; padding: 0 24px; height: 92px; border: 2px solid var(--ink); border-radius: 14px; background: #fff; font-size: 20px; font-weight: 700; transform: rotateX(14deg); transform-origin: 50% 100%; box-shadow: 0 10px 0 var(--ink); }
 .key::before { content: ""; position: absolute; inset: 14px; border-radius: 8px; background: var(--tint); z-index: -1; }
 .key { position: relative; }
 .step3 .doc { --m: var(--orange); }
@@ -342,7 +346,7 @@ h1 { font-size: clamp(34px, 5.4vw, 70px); white-space: nowrap; position: relativ
 <section class="demo" aria-label="Finder에서 바로 변환하는 모습">
   <div class="demo-sticky">
     <div class="finder">
-      <div class="titlebar"><i></i><i></i><i></i></div>
+      <div class="titlebar"><i class="os-mac"></i><i class="os-mac"></i><i class="os-mac"></i><span class="os-win" aria-hidden="true"><b>—</b><b>▢</b><b>✕</b></span></div>
       <aside class="sidebar">
         <div class="sel"><svg viewBox="0 0 16 16"><path d="M2 4h5l2 2h5v7H2z"/></svg>데스크탑</div>
         <div><svg viewBox="0 0 16 16"><path d="M4 2h6l3 3v9H4z"/></svg>문서</div>
@@ -358,7 +362,7 @@ h1 { font-size: clamp(34px, 5.4vw, 70px); white-space: nowrap; position: relativ
         </div>
         <div class="file file-jpg"><div class="pic"><svg><use href="#pic"/></svg></div><b>photo.jpg</b></div>
         <svg class="cursor"><use href="#arrow"/></svg>
-        <div class="chip">⌥ Option 꾹</div>
+        <div class="chip"><span class="os-mac">⌥ Option 꾹</span><span class="os-win">Ctrl + Alt 꾹</span></div>
       </div>
     </div>
     <p class="caption">앱을 따로 열 필요 없이, <u>파일이 있는 자리에서.</u></p>
@@ -370,7 +374,7 @@ h1 { font-size: clamp(34px, 5.4vw, 70px); white-space: nowrap; position: relativ
 </div>
 
 <section id="how" class="sec steps wrap" data-in>
-  <div class="sec-head"><h2 class="r">딱, 이 정도면 끝.</h2><span class="note r">사용 방법 · macOS 기준</span></div>
+  <div class="sec-head"><h2 class="r">딱, 이 정도면 끝.</h2><span class="note r">사용 방법 · <span class="os-mac">macOS</span><span class="os-win">Windows</span> 기준</span></div>
   <ol>
     <li>
       <svg class="num" viewBox="0 0 120 84"><text x="0" y="78">01</text></svg>
@@ -379,8 +383,8 @@ h1 { font-size: clamp(34px, 5.4vw, 70px); white-space: nowrap; position: relativ
     </li>
     <li style="--d:.125s">
       <svg class="num" viewBox="0 0 120 84"><text x="0" y="78">02</text></svg>
-      <div class="pic-wrap keycap"><div class="key">Option</div></div>
-      <h3 class="r" style="--d:.25s">Option 꾹 누르고</h3>
+      <div class="pic-wrap keycap"><div class="key"><span class="os-mac">Option</span><span class="os-win">Ctrl + Alt</span></div></div>
+      <h3 class="r" style="--d:.25s"><span class="os-mac">Option</span><span class="os-win">Ctrl+Alt</span> 꾹 누르고</h3>
     </li>
     <li class="step3" style="--d:.25s">
       <svg class="num" viewBox="0 0 120 84"><text x="0" y="78">03</text></svg>
