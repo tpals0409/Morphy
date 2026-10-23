@@ -95,3 +95,11 @@ Answers docs/release.md's open "앱 자동 업데이트" item without Sparkle.
 - **Why not Sparkle:** it would add a framework, an EdDSA key to keep and an appcast to publish, while the website already serves the version, hash and file that the Windows updater uses.
 - **Limit:** the swap needs write access to the app's folder. A standard (non-admin) user with Morphy in /Applications gets an error asking to check permissions.
 - **Testing:** `Morphy --update -updateOrigin http://localhost:8787` runs the same check and install against `wrangler dev`.
+
+## D10 · 2026-10-23 · The menu bar menu matches the Windows tray menu
+
+- **Now:** five entries, as on Windows: `Morphy <version>`, **사용 방법**, **업데이트 확인…** (or **업데이트 설치 (a → b)…** when one is found, D9), **로그인 시 실행**, **Morphy 종료**. Above them, only while it applies: the Accessibility permission prompt, `변환 중 n/m — 취소`, and `문서 변환 기능 내려받는 중 n% — 취소`.
+- **사용 방법** opens an alert with the Windows guide's steps in Mac terms (Finder, Option). It also holds **문서 변환 기능 삭제…** when Morphy's own engine copy exists.
+- **Removed:** the per-file result list with its 열기/Finder에서 보기 submenus, 실패한 항목 다시 시도, 목록 지우기, the engine add/remove/status lines, and the Option on/off toggle. Results already arrive as notifications and land beside the original; the engine is offered when an Office file first needs it (D4).
+- **Option is always on,** as Ctrl+Alt is on Windows. The `triggerDisabled` preference is no longer read, so someone who had turned it off gets the menu again; quitting Morphy is the way to stop it.
+- **Why:** the product owner asked for the same short menu on both platforms.
