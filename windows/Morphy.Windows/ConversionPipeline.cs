@@ -28,12 +28,13 @@ internal static class Conversion
         ["xlsx"] = ["pdf", "csv"], ["xls"] = ["pdf", "xlsx", "csv"], ["ods"] = ["pdf", "xlsx", "csv"], ["csv"] = ["pdf", "xlsx"],
         ["pptx"] = ["pdf"], ["ppt"] = ["pdf", "pptx"], ["odp"] = ["pdf", "pptx"]
     };
-    internal static string Normalize(string ext) => ext.ToLowerInvariant() switch { "jpeg" or "jpe" or "jfif" => "jpg", "tif" => "tiff", "heif" => "heic", "markdown" => "md", var s => s };
+    internal static readonly string[] WebOutputs = ["pdf", "jpg"];   // HTML through WebView2, offline (WebEngine, D11)
+    internal static string Normalize(string ext) => ext.ToLowerInvariant() switch { "jpeg" or "jpe" or "jfif" => "jpg", "tif" => "tiff", "heif" => "heic", "markdown" => "md", "htm" => "html", var s => s };
     internal static string Extension(string path) => Normalize(Path.GetExtension(path).TrimStart('.'));
     internal static OutputFormat[] Outputs(string path)
     {
         string ext = Extension(path);
-        string[] outputs = ImageExtensions.Contains(ext) ? ImageOutputs : ext == "pdf" ? [.. ImageOutputs.Where(x => x != "pdf"), "txt"] : OfficeRoutes.GetValueOrDefault(ext) ?? [];
+        string[] outputs = ImageExtensions.Contains(ext) ? ImageOutputs : ext == "pdf" ? [.. ImageOutputs.Where(x => x != "pdf"), "txt"] : ext == "html" ? WebOutputs : OfficeRoutes.GetValueOrDefault(ext) ?? [];
         return Formats.Where(f => outputs.Contains(f.Extension) && f.Extension != ext).ToArray();
     }
     internal static bool NeedsEngine(string source, OutputFormat format) => OfficeRoutes.ContainsKey(Extension(source)) && format.Extension != "html";
@@ -54,6 +55,7 @@ internal static class Conversion
         string target = Path.Combine(staging, stem + "." + format.Extension);
         string[] outputs;
         if (ext == "pdf") outputs = PdfEngine.Convert(source, format, staging, token);
+        else if (ext == "html") { WebEngine.Convert(source, format, target, token); outputs = [target]; }
         else if (OfficeRoutes.ContainsKey(ext)) outputs = OfficeEngine.Convert(source, format, staging, token);
         else if (ext == "svg") { SvgEngine.Convert(source, format, target); outputs = [target]; }
         else { using var image = ReadImage(source); WriteImage(image, format, target); outputs = [target]; }

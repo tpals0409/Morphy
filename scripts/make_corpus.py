@@ -62,6 +62,9 @@ csv = "이름,금액,메모\n홍길동,1000,\"쉼표, 포함\"\n김철수,2500,�
 (out / "명단 utf8.csv").write_text(csv, encoding="utf-8")
 (out / "명단 cp949.csv").write_bytes(csv.encode("cp949"))
 (out / "메모 cp949.txt").write_bytes("한글 텍스트 파일입니다.\n두 번째 줄.\n".encode("cp949"))
+# HTML for the WebView2/WebKit route: grid, local image, script, CSS page break, blocked network.
+png(out / "local.png")
+(out / "웹 페이지.html").write_text('<!doctype html><html lang="ko"><head><meta charset="utf-8"><style>.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.card{background:#f47b55;padding:16px}h2{break-before:page}</style></head><body><h1>웹 페이지 변환</h1><p id="js">스크립트 전</p><p id="net">확인 중</p><div class="grid"><div class="card">하나</div><div class="card">둘</div><div class="card">셋</div></div><img src="local.png" width="64"><img src="https://www.microsoft.com/favicon.ico" width="1" onload="document.getElementById(\'net\').textContent=\'외부 연결됨\'" onerror="document.getElementById(\'net\').textContent=\'외부 차단됨\'"><h2>둘째 쪽</h2><p>새 페이지에서 시작해요.</p><script>document.getElementById(\'js\').textContent=\'스크립트가 바꾼 문장\';</script></body></html>', encoding="utf-8")
 # A table right under a line of text: GitHub renders it as a table, strict parsers don't without the fix.
 (out / "표 바로 아래.md").write_text("# 분기 보고\n설명 문장 바로 아래에 표가 있어요.\n| 월 | 매출 |\n|---|---:|\n| 1월 | 100 |\n| 2월 | 120 |\n", encoding="utf-8")
 (out / "README 한글.md").write_text("# 마크다운 제목\n\n- 목록 **굵게**\n- 두 번째\n\n| 이름 | 값 |\n|---|---|\n| 가 | 1 |\n\n```\ncode 블록\n```\n", encoding="utf-8")

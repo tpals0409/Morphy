@@ -103,3 +103,11 @@ Answers docs/release.md's open "앱 자동 업데이트" item without Sparkle.
 - **Removed:** the per-file result list with its 열기/Finder에서 보기 submenus, 실패한 항목 다시 시도, 목록 지우기, the engine add/remove/status lines, and the Option on/off toggle. Results already arrive as notifications and land beside the original; the engine is offered when an Office file first needs it (D4).
 - **Option is always on,** as Ctrl+Alt is on Windows. The `triggerDisabled` preference is no longer read, so someone who had turned it off gets the menu again; quitting Morphy is the way to stop it.
 - **Why:** the product owner asked for the same short menu on both platforms.
+
+## D11 · 2026-10-23 · HTML → PDF and JPG with the OS web engine, offline
+
+- **Now:** `.html` and `.htm` files offer **PDF** and **JPG**. Mac draws them with WebKit (Safari's engine), Windows with WebView2 (Edge's engine, part of Windows 11). Nothing extra is downloaded.
+- **PDF:** A4 with 0.5in margins, CSS page breaks and background colours kept. **JPG:** the whole page as one image, 1024 CSS px wide at 2x (2048 px); pages taller than 16,000 CSS px are refused with a hint to use PDF.
+- **Offline:** every request that isn't a local file is blocked (Mac: a WebKit content rule; Windows: a 403 for every non-file request), navigation away and pop-ups are cancelled, and the page reads only its own folder. Scripts run, with a time limit (20s Mac, 30s Windows). A page saved with "웹페이지, 전체" works; images, fonts or scripts on other servers are simply missing.
+- **Why not LibreOffice:** it imports HTML as a word-processor document and loses flex/grid layout and web fonts.
+- **Why offline by default:** the site and FAQ promise that conversion needs no internet and sends nothing out; loading a page's remote assets would contact those servers. An opt-in "load external resources" setting can come later if pages regularly come out incomplete.

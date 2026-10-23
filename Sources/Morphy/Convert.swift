@@ -55,12 +55,15 @@ enum Routes {
         "pptx": [.pdf], "ppt": [.pdf, .pptx], "odp": [.pdf, .pptx],
     ]
     static let textInputs: Set<String> = ["txt", "md", "csv"]
+    /// HTML in: drawn by WebKit, offline (WebPage, D11).
+    static let webInputs: Set<String> = ["html", "htm"]
+    static let webOutputs: Set<Format> = [.pdf, .jpg]
     /// PDF in: every image format (one file per page) or its text layer.
     static var pdfOutputs: Set<Format> { imageOutputs.subtracting([.pdf]).union([.txt]) }
 }
 
 struct Input {
-    enum Kind { case image, office, pdf }
+    enum Kind { case image, office, pdf, web }
     let url: URL
     let kind: Kind
     let outputs: Set<Format>
@@ -101,6 +104,11 @@ struct Input {
             let head = String(decoding: (try? FileHandle(forReadingFrom: url).read(upToCount: 4096)) ?? Data(), as: UTF8.self)
             guard head.contains("<svg"), let svg = NSImage(contentsOf: url), svg.size.width > 0, svg.size.height > 0 else { throw mismatch }
             return Input(url: url, kind: .image, outputs: Routes.imageOutputs)
+        }
+        if Routes.webInputs.contains(ext) {
+            let head = String(decoding: (try? FileHandle(forReadingFrom: url).read(upToCount: 4096)) ?? Data(), as: UTF8.self)
+            guard head.contains("<") else { throw mismatch }
+            return Input(url: url, kind: .web, outputs: Routes.webOutputs)
         }
         guard let outputs = Routes.office[ext] else { throw MorphyError.unsupported }
 
@@ -143,6 +151,7 @@ enum Pipeline {
             case .office: try Office.convert(source, to: format, in: tmp, token)
             case .pdf: try PDFPages.convert(source, to: format, in: tmp, token)
             case .image: [try Images.convert(source, to: format, in: tmp)]
+            case .web: [try WebPage.convert(source, to: format, in: tmp, token)]
             }
             for out in outs { try validate(out, format) }
             if token.cancelled { return .cancelled }
