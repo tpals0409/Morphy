@@ -1,5 +1,5 @@
-// Cloudflare Worker "morphy": the product page and DMGs in web/ are static assets;
-// src/index.js answers /download and /api/release from the D1 releases table.
+// Cloudflare Worker "morphy": the product page in web/ is static assets; src/index.js serves
+// Mac and Windows downloads from the R2 bucket, using the D1 releases table to pick the current version.
 {
   "name": "morphy",
   "main": "src/index.js",
@@ -8,10 +8,12 @@
   "d1_databases": [
     { "binding": "DB", "database_name": "morphy", "database_id": "5778d8dc-3d79-4ede-be37-ebe2ec1a769d" }
   ],
-  // PR previews read the same releases table; the Worker only runs SELECTs on it.
+  "r2_buckets": [{ "binding": "RELEASES", "bucket_name": "morphy-releases" }],
+  // PR previews read the same table and bucket; the Worker never writes to either.
   "previews": {
     "d1_databases": [
       { "binding": "DB", "database_name": "morphy", "database_id": "5778d8dc-3d79-4ede-be37-ebe2ec1a769d" }
-    ]
+    ],
+    "r2_buckets": [{ "binding": "RELEASES", "bucket_name": "morphy-releases" }]
   }
 }

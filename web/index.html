@@ -23,7 +23,8 @@
   --spring: linear(0, .28 6.9%, .57 14.5%, .79 22.6%, .91 31.2%, .97 40.6%, .995 52%, 1);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html { background: var(--cream); color: var(--ink); font-family: "Pretendard Variable", Pretendard, -apple-system, system-ui, sans-serif; -webkit-font-smoothing: antialiased; scroll-behavior: smooth; }
+[hidden] { display: none !important; }
+html { font-feature-settings: "calt" 0; /* Pretendard otherwise draws "x64" as "×64" */ background: var(--cream); color: var(--ink); font-family: "Pretendard Variable", Pretendard, -apple-system, system-ui, sans-serif; -webkit-font-smoothing: antialiased; scroll-behavior: smooth; }
 body { overflow-x: clip; }
 a { color: inherit; text-decoration: none; }
 img, svg { display: block; }
@@ -173,7 +174,10 @@ h1 { font-size: clamp(34px, 5.4vw, 70px); white-space: nowrap; position: relativ
 .cta .wrap { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 32px; position: relative; z-index: 1; }
 .cta h2 { font-size: clamp(44px, 6.6vw, 80px); }
 .cta .act { text-align: center; }
-.cta small { display: block; margin-top: 12px; font-size: 12px; font-weight: 600; }
+.cta .act { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.cta small { display: block; font-size: 12px; font-weight: 600; line-height: 1.6; }
+.cta small a { text-decoration: underline; }
+.win-note { margin-top: 12px; }
 .cta-ring { position: absolute; right: -70px; top: 50%; translate: 0 -50%; width: 240px; height: 240px; -webkit-mask: conic-gradient(#000 var(--sweep), transparent 0); mask: conic-gradient(#000 var(--sweep), transparent 0); }
 .cta-ring i { position: absolute; inset: 0; border-radius: 50%; background: var(--cream); -webkit-mask: radial-gradient(circle, transparent 40%, #000 40.5%); mask: radial-gradient(circle, transparent 40%, #000 40.5%); }
 
@@ -295,7 +299,7 @@ h1 { font-size: clamp(34px, 5.4vw, 70px); white-space: nowrap; position: relativ
   .foot { flex-direction: column; align-items: flex-start; gap: 12px; }
   .rel { text-align: left; }
   .cta .wrap { grid-template-columns: 1fr; gap: 28px; }
-  .cta .act { text-align: left; }
+  .cta .act { text-align: left; align-items: flex-start; }
   .cta-ring { width: 180px; height: 180px; right: -60px; top: auto; bottom: -50px; translate: 0 0; }
 }
 </style>
@@ -322,8 +326,10 @@ h1 { font-size: clamp(34px, 5.4vw, 70px); white-space: nowrap; position: relativ
       <p class="lede r" style="--d:.25s">파일 고르고, 꾹 누르고, 놓으면 끝.<br>하던 일은 계속. 변환은 Morphy.</p>
       <div class="actions r" style="--d:.375s">
         <a class="btn btn-dark" href="/download">macOS 다운로드 ↗</a>
-        <span class="btn">Windows 개발 중</span>
+        <span class="btn win-off">Windows 개발 중</span>
+        <a class="btn win-on" href="/download/windows" hidden>Windows 다운로드 ↗</a>
       </div>
+      <p class="note win-note win-on" hidden>Windows 11 x64 · <span class="win-ver">0.1.0</span> 베타 · 미서명이라 설치할 때 Windows 보안 경고가 뜰 수 있어요.</p>
     </div>
     <div class="art" aria-hidden="true">
       <div class="disc"></div>
@@ -458,7 +464,9 @@ h1 { font-size: clamp(34px, 5.4vw, 70px); white-space: nowrap; position: relativ
     <h2><span class="line"><span class="r">변환은 짧게.</span></span><span class="line"><span class="r" style="--d:.125s">몰입은 길게.</span></span></h2>
     <div class="act r" style="--d:.25s">
       <a class="btn btn-dark" href="/download">macOS 다운로드 ↗</a>
-      <small>Windows 버전 개발 중</small>
+      <small class="win-off">Windows 버전 개발 중</small>
+      <a class="btn win-on" href="/download/windows" hidden>Windows 다운로드 ↗</a>
+      <small class="win-on" hidden>Windows 11 x64 · <span class="win-ver">0.1.0</span> 베타 · 미서명<br>설치할 때 문서 엔진(약 375MB)을 추가로 받아요.<br>인터넷 연결과 2GB 이상 여유 공간이 필요해요.<br><a href="/releases/WicHeic-v1.1.16-corresponding-source.zip">HEIC 코덱 대응 소스(LGPL)</a></small>
     </div>
     <div></div>
   </div>
@@ -466,7 +474,7 @@ h1 { font-size: clamp(34px, 5.4vw, 70px); white-space: nowrap; position: relativ
 
 <footer class="wrap foot" data-in>
   <a class="logo foot-logo" href="#"><img src="icon.png" alt="">Morphy</a>
-  <div class="rel"><span id="rel-ver">v0.1.0</span> · macOS 14 이상 · Apple Silicon<code id="rel-sha" hidden></code></div>
+  <div class="rel"><span id="rel-ver">v0.1.0</span> · macOS 14 이상 · Apple Silicon<code id="rel-sha" hidden></code><span class="win-on" hidden><br>Windows <span id="rel-win-ver"></span> · Windows 11 x64<code id="rel-win-sha"></code></span></div>
 </footer>
 
 <script>
@@ -477,6 +485,15 @@ h1 { font-size: clamp(34px, 5.4vw, 70px); white-space: nowrap; position: relativ
     if (!r) return;
     document.getElementById('rel-ver').textContent = 'v' + r.version + ' · ' + (r.bytes / 1048576).toFixed(1) + 'MB';
     const sha = document.getElementById('rel-sha'); sha.textContent = 'SHA-256 ' + r.sha256; sha.hidden = false;
+  }).catch(() => {});
+  // Windows 줄이 D1에 생기면 '개발 중' 대신 다운로드 버튼과 안내가 나타나요.
+  fetch('/api/release/windows').then(r => r.ok && r.json()).then(r => {
+    if (!r) return;
+    document.querySelectorAll('.win-off').forEach(e => { e.hidden = true; });
+    document.querySelectorAll('.win-on').forEach(e => { e.hidden = false; });
+    document.querySelectorAll('.win-ver').forEach(e => { e.textContent = r.version; });
+    document.getElementById('rel-win-ver').textContent = 'v' + r.version + ' · ' + (r.bytes / 1048576).toFixed(0) + 'MB';
+    document.getElementById('rel-win-sha').textContent = 'SHA-256 ' + r.sha256;
   }).catch(() => {});
   const io = new IntersectionObserver(es => es.forEach(e => {
     if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }

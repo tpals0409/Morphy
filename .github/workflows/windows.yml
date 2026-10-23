@@ -23,8 +23,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Worker Windows routes
-        run: node --test deployment/cloudflare/windows-routes.test.mjs
+      - name: Worker download routes
+        run: node --test src/index.test.mjs
       - name: Build and self-test
         shell: pwsh
         run: ./build-windows.ps1 -SelfTest
@@ -51,8 +51,8 @@ jobs:
       - name: Corresponding codec sources
         shell: pwsh
         run: ./scripts/package-codec-sources.ps1
-      - name: Verify Mac deployment bundle
-        run: python scripts/publish-windows-r2.py --artifact build/windows-release
+      - name: Verify website release bundle
+        run: python scripts/publish-release.py --artifact build/windows-release
       - uses: actions/upload-artifact@v4
         with:
           name: Morphy-Windows-${{ inputs.version || '0.1.0' }}-${{ github.sha }}

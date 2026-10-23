@@ -113,6 +113,8 @@ build/Morphy.app/Contents/MacOS/Morphy --selftest /tmp/corpus
 | `Sources/Morphy/EngineInstaller.swift` | 문서 변환 기능 내려받기와 확인, 설치 |
 | `Sources/Morphy/App.swift` | 메뉴바, 작업 대기열, 알림 |
 | `Sources/Morphy/SelfTest.swift` | `--selftest` |
+| `web/`, `src/`, `wrangler.jsonc` | 상세페이지와 다운로드 Worker (Cloudflare, R2, D1) |
+| `scripts/publish-release.py` | Mac DMG와 Windows 설치 파일을 웹에 게시 |
 | `DECISIONS.md` | 설계 결정 기록 (D1–D8) |
 | `docs/` | 엔진 내려받기 설계, 웹 배포 절차 |
 
