@@ -24,7 +24,7 @@
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 [hidden] { display: none !important; }
-html { font-feature-settings: "calt" 0; /* Pretendard otherwise draws "x64" as "×64" */ background: var(--cream); color: var(--ink); font-family: "Pretendard Variable", Pretendard, -apple-system, system-ui, sans-serif; -webkit-font-smoothing: antialiased; scroll-behavior: smooth; }
+html { background: var(--cream); color: var(--ink); font-family: "Pretendard Variable", Pretendard, -apple-system, system-ui, sans-serif; -webkit-font-smoothing: antialiased; scroll-behavior: smooth; }
 body { overflow-x: clip; }
 a { color: inherit; text-decoration: none; }
 img, svg { display: block; }
@@ -329,7 +329,7 @@ h1 { font-size: clamp(34px, 5.4vw, 70px); white-space: nowrap; position: relativ
         <span class="btn win-off">Windows 개발 중</span>
         <a class="btn win-on" href="/download/windows" hidden>Windows 다운로드 ↗</a>
       </div>
-      <p class="note win-note win-on" hidden>Windows 11 x64 · <span class="win-ver">0.1.0</span> 베타 · 미서명이라 설치할 때 Windows 보안 경고가 뜰 수 있어요.</p>
+      <p class="note win-note win-on" hidden>Windows 11 64비트 · <span class="win-ver">0.1.0</span> 베타 · 미서명이라 설치할 때 Windows 보안 경고가 뜰 수 있어요.</p>
     </div>
     <div class="art" aria-hidden="true">
       <div class="disc"></div>
@@ -466,7 +466,7 @@ h1 { font-size: clamp(34px, 5.4vw, 70px); white-space: nowrap; position: relativ
       <a class="btn btn-dark" href="/download">macOS 다운로드 ↗</a>
       <small class="win-off">Windows 버전 개발 중</small>
       <a class="btn win-on" href="/download/windows" hidden>Windows 다운로드 ↗</a>
-      <small class="win-on" hidden>Windows 11 x64 · <span class="win-ver">0.1.0</span> 베타 · 미서명<br>설치할 때 문서 엔진(약 375MB)을 추가로 받아요.<br>인터넷 연결과 2GB 이상 여유 공간이 필요해요.<br><a href="/releases/WicHeic-v1.1.16-corresponding-source.zip">HEIC 코덱 대응 소스(LGPL)</a></small>
+      <small class="win-on" hidden>Windows 11 64비트 · <span class="win-ver">0.1.0</span> 베타 · 미서명<br>설치할 때 문서 엔진(약 375MB)을 추가로 받아요.<br>인터넷 연결과 2GB 이상 여유 공간이 필요해요.<br><a href="/releases/WicHeic-v1.1.16-corresponding-source.zip">HEIC 코덱 대응 소스(LGPL)</a></small>
     </div>
     <div></div>
   </div>
@@ -474,7 +474,7 @@ h1 { font-size: clamp(34px, 5.4vw, 70px); white-space: nowrap; position: relativ
 
 <footer class="wrap foot" data-in>
   <a class="logo foot-logo" href="#"><img src="icon.png" alt="">Morphy</a>
-  <div class="rel"><span id="rel-ver">v0.1.0</span> · macOS 14 이상 · Apple Silicon<code id="rel-sha" hidden></code><span class="win-on" hidden><br>Windows <span id="rel-win-ver"></span> · Windows 11 x64<code id="rel-win-sha"></code></span></div>
+  <div class="rel"><span id="rel-ver">v0.1.0</span> · macOS 14 이상 · Apple Silicon<code id="rel-sha" hidden></code><span class="win-on" hidden><br>Windows <span id="rel-win-ver"></span> · Windows 11 64비트<code id="rel-win-sha"></code></span></div>
 </footer>
 
 <script>
