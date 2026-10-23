@@ -120,6 +120,12 @@ enum SelfTest {
         if case .failed = unwritable { check(true, "no folder → explicit failure") } else { check(false, "no folder → explicit failure") }
 
         engineChecks(dir, check)
+        let tableAfterText = "설명입니다.\n| 월 | 매출 |\n|---|---:|\n| 1월 | 100 |"
+        check(Office.separateTables(tableAfterText) == "설명입니다.\n\n| 월 | 매출 |\n|---|---:|\n| 1월 | 100 |", "markdown: blank line added before a table under text")
+        check(Office.separateTables("글\r\n월 | 매출\r\n---|---\r\n1월 | 100\r\n").contains("글\r\n\n월 | 매출"), "markdown: also for tables without outer pipes and CRLF")
+        for unchanged in ["# 제목\n\n| a | b |\n|---|---|\n| 1 | 2 |", "```\ncode\n| a | b |\n|---|---|\n```", "a | b 는 표가 아니에요\n다음 줄"] {
+            check(Office.separateTables(unchanged) == unchanged, "markdown: left alone — \(unchanged.prefix(12))")
+        }
         let release = { (v: String, path: String, sha: String) in
             Data(#"{"version":"\#(v)","path":"\#(path)","sha256":"\#(sha)","bytes":10}"#.utf8)
         }
@@ -188,6 +194,9 @@ enum SelfTest {
                     check(names.sorted() == expected.sorted(), "\(label) → one CSV per sheet \(names)")
                 }
                 let raw = urls.map { String(decoding: try! Data(contentsOf: $0), as: UTF8.self) }.joined()
+                if file.pathExtension == "md", format == .html {
+                    check(raw.contains("<table") && !raw.contains("|---"), "\(label) has a real table, not pipe text")
+                }
                 switch format {
                 case .pdf:
                     // Missing Hangul font = blank Korean text that still extracts fine, so check the embedded fonts.

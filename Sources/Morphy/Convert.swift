@@ -390,7 +390,7 @@ enum Office {
         if Routes.textInputs.contains(ext) {
             // Korean CSV/TXT is often CP949 (Excel's default); LibreOffice gets UTF-8 either way.
             guard let text = utf8Text(source) else { throw MorphyError("텍스트 인코딩을 알 수 없어요. UTF-8로 저장해 주세요.") }
-            try text.write(to: copy, atomically: false, encoding: .utf8)
+            try (ext == "md" ? separateTables(text) : text).write(to: copy, atomically: false, encoding: .utf8)
         } else {
             try FileManager.default.copyItem(at: source, to: copy)
         }
@@ -434,6 +434,26 @@ enum Office {
             for out in outs { try (Data([0xEF, 0xBB, 0xBF]) + Data(contentsOf: out)).write(to: out) }
         }
         return outs
+    }
+
+    /// LibreOffice's Markdown import starts a table only after a blank line; GitHub and most editors also accept a
+    /// table right under a line of text. Adds that blank line before a table header, outside fenced code blocks.
+    static func separateTables(_ text: String) -> String {
+        let delimiter = #/^\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?$/#
+        let lines = text.components(separatedBy: "\n")
+        var out: [String] = []
+        var fenced = false
+        for (i, line) in lines.enumerated() {
+            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.hasPrefix("```") || trimmed.hasPrefix("~~~") { fenced.toggle() }
+            if !fenced, trimmed.contains("|"), i + 1 < lines.count, let previous = out.last,
+               !previous.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                let next = lines[i + 1].trimmingCharacters(in: .whitespacesAndNewlines)
+                if next.contains("|"), next.wholeMatch(of: delimiter) != nil { out.append("") }
+            }
+            out.append(line)
+        }
+        return out.joined(separator: "\n")
     }
 
     /// UTF-8 first, then CP949 (EUC-KR superset).
