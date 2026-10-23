@@ -120,6 +120,7 @@ enum SelfTest {
         if case .failed = unwritable { check(true, "no folder → explicit failure") } else { check(false, "no folder → explicit failure") }
 
         engineChecks(dir, check)
+        webChecks(dir, png, check)
         let tableAfterText = "설명입니다.\n| 월 | 매출 |\n|---|---:|\n| 1월 | 100 |"
         check(Office.separateTables(tableAfterText) == "설명입니다.\n\n| 월 | 매출 |\n|---|---:|\n| 1월 | 100 |", "markdown: blank line added before a table under text")
         check(Office.separateTables("글\r\n월 | 매출\r\n---|---\r\n1월 | 100\r\n").contains("글\r\n\n월 | 매출"), "markdown: also for tables without outer pipes and CRLF")
@@ -171,6 +172,48 @@ enum SelfTest {
         let leftovers = ((try? fm.contentsOfDirectory(atPath: target.deletingLastPathComponent().deletingLastPathComponent().path)) ?? [])
             + ((try? fm.contentsOfDirectory(atPath: EngineInstaller.cache.path)) ?? []).filter { $0.hasPrefix("mount-") }
         check(!fm.fileExists(atPath: target.path) && leftovers.isEmpty, "refused engine leaves no install, staging or mount")
+    }
+
+    /// HTML → PDF/JPG through WebKit: layout, scripts, local images, page breaks, and no network access (D11).
+    private static func webChecks(_ dir: URL, _ png: URL, _ check: (Bool, String) -> Void) {
+        let fm = FileManager.default
+        let page = dir.appendingPathComponent("웹 페이지.html")
+        try? fm.copyItem(at: png, to: dir.appendingPathComponent("local.png"))
+        try! """
+            <!doctype html><html lang="ko"><head><meta charset="utf-8"><style>
+            .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.card{background:#f47b55;padding:16px}h2{break-before:page}
+            </style></head><body><h1>웹 페이지 변환</h1><p id="js">스크립트 전</p><p id="net">확인 중</p>
+            <div class="grid"><div class="card">하나</div><div class="card">둘</div><div class="card">셋</div></div>
+            <img src="local.png" width="64"><h2>둘째 쪽</h2><p>새 페이지에서 시작해요.</p>
+            <script>
+            document.getElementById('js').textContent = '스크립트가 바꾼 문장';
+            fetch('https://www.apple.com/', {mode: 'no-cors'})
+              .then(() => document.getElementById('net').textContent = '외부 연결됨')
+              .catch(() => document.getElementById('net').textContent = '외부 차단됨');
+            </script></body></html>
+            """.write(to: page, atomically: true, encoding: .utf8)
+        check((try? Input.check(page))?.outputs == [.pdf, .jpg], "HTML offers PDF and JPG")
+        let html = dir.appendingPathComponent("웹.htm")
+        try? fm.copyItem(at: page, to: html)
+        check((try? Input.check(html))?.outputs == [.pdf, .jpg], ".htm is HTML too")
+
+        if case .done(let urls) = Pipeline.run(page, to: .pdf, saveIn: dir, CancelToken()), let doc = PDFDocument(url: urls[0]) {
+            let text = doc.string ?? ""
+            let a4 = doc.page(at: 0).map { abs($0.bounds(for: .mediaBox).width - 595) < 2 } ?? false
+            check(doc.pageCount == 2 && a4, "HTML → PDF: A4, CSS page break kept (\(doc.pageCount) pages)")
+            check(text.contains("스크립트가 바꾼 문장") && text.contains("하나"), "HTML → PDF: scripts ran, Korean text kept")
+            check(text.contains("외부 차단됨"), "HTML → PDF: network requests are blocked")
+        } else { check(false, "HTML → PDF") }
+
+        // The app converts on a background queue while the main thread runs its loop.
+        var state: Job.State?
+        DispatchQueue.global().async { let r = Pipeline.run(page, to: .jpg, saveIn: dir, CancelToken()); DispatchQueue.main.async { state = r } }
+        let deadline = Date().addingTimeInterval(40)
+        while state == nil, Date() < deadline { RunLoop.main.run(until: Date().addingTimeInterval(0.05)) }
+        if case .done(let urls) = state, let src = CGImageSourceCreateWithURL(urls[0] as CFURL, nil),
+           let img = CGImageSourceCreateImageAtIndex(src, 0, nil) {
+            check(img.width == Int(WebPage.width * 2) && img.height > img.width / 2, "HTML → JPG from a background queue: whole page at 2x (\(img.width)×\(img.height))")
+        } else { check(false, "HTML → JPG from a background queue: \(String(describing: state))") }
     }
 
     private static func officeChecks(_ corpus: URL, _ out: URL, _ check: (Bool, String) -> Void) {
