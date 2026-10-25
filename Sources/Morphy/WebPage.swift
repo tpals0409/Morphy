@@ -134,12 +134,11 @@ private final class Renderer: NSObject, WKNavigationDelegate {
             let config = WKSnapshotConfiguration()
             config.rect = NSRect(origin: .zero, size: size)
             config.afterScreenUpdates = true
-            config.snapshotWidth = NSNumber(value: Double(size.width * 2))  // 2x pixels even with no Retina screen attached
             webView.takeSnapshot(with: config) { image, _ in
                 guard let self, self.done != nil else { return }
-                // At 2x for sharp text, whatever screen (or none) the Mac has.
-                var rect = NSRect(x: 0, y: 0, width: size.width * 2, height: size.height * 2)
-                guard let image, let cg = image.cgImage(forProposedRect: &rect, context: nil, hints: nil) else {
+                // WebKit snapshots at the screen's backing scale (1x with no display, 2x on Retina); redraw at exactly 2x
+                // so the JPG is the same size on every Mac.
+                guard let image, let cg = Self.redraw(image, width: Int(size.width * 2), height: Int(size.height * 2)) else {
                     return self.finish(.failure(MorphyError("페이지를 이미지로 만들지 못했어요.")))
                 }
                 do {
@@ -150,6 +149,17 @@ private final class Renderer: NSObject, WKNavigationDelegate {
                 }
             }
         }
+    }
+
+    private static func redraw(_ image: NSImage, width: Int, height: Int) -> CGImage? {
+        var rect = NSRect(origin: .zero, size: image.size)
+        guard let source = image.cgImage(forProposedRect: &rect, context: nil, hints: nil),
+              let ctx = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+                                  space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)
+        else { return nil }
+        ctx.interpolationQuality = .high
+        ctx.draw(source, in: CGRect(x: 0, y: 0, width: width, height: height))
+        return ctx.makeImage()
     }
 
     private func printPDF() {
