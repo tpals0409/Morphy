@@ -58,6 +58,13 @@ internal static class SelfTest
                 string second = Conversion.Run(source, format, root);
                 Check(second != output && second.Contains("(1)"), "Collision must not overwrite");
             }
+            foreach (var pair in new[] { ("photo.jpg.png", "photo"), ("photo.PNG.PNG", "photo"), ("report.v1.png", "report.v1"), ("report.pdf.docx", "report"), ("photo.JPEG.png", "photo"), ("pdf.png", "pdf") })
+                Check(Conversion.OutputStem(pair.Item1) == pair.Item2, "Output name: " + pair.Item1);
+            string repeated = Path.Combine(root, "double.jpg.png"); File.WriteAllBytes(repeated, original);
+            var jpg = Conversion.Formats.Single(f => f.Extension == "jpg");
+            Check(Path.GetFileName(Conversion.Run(repeated, jpg, root)) == "double.jpg", "Repeated extension removed");
+            Check(Path.GetFileName(Conversion.Run(repeated, jpg, root)) == "double (1).jpg", "Cleaned name collision preserved");
+            Check(original.SequenceEqual(File.ReadAllBytes(repeated)), "Repeated-extension original unchanged");
             Check(original.SequenceEqual(File.ReadAllBytes(source)), "Original changed");
             string corrupt = Path.Combine(root, "bad.png"); File.WriteAllText(corrupt, "not an image");
             bool rejected = false; try { Conversion.Run(corrupt, Conversion.Formats[0], root); } catch { rejected = true; }

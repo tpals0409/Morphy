@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -48,17 +48,17 @@ internal static class OfficeEngine
     }
     internal static string[] Convert(string source, OutputFormat format, string staging, CancellationToken token)
     {
-        string ext = Conversion.Extension(source), stem = Path.GetFileNameWithoutExtension(source);
+        string ext = Conversion.Extension(source), stem = Conversion.OutputStem(source);
         if (ext == "md" && format.Extension == "html") { string html = Path.Combine(staging, stem + ".html"); File.WriteAllText(html, MarkdownHtml(DecodeText(source)), new UTF8Encoding(false)); return [html]; }
         string engine = EngineInstaller.Find() ?? throw new IOException("문서 변환 기능을 먼저 추가해 주세요.");
         string work = Path.Combine(staging, "office-work"); Directory.CreateDirectory(work);
-        string input = source;
+        string input = Path.Combine(work, stem + "." + ext);
         if (ext is "txt" or "md" or "csv")
         {
             input = Path.Combine(work, stem + (ext == "md" ? ".html" : "." + ext));
             File.WriteAllText(input, ext == "md" ? MarkdownHtml(DecodeText(source)) : DecodeText(source), new UTF8Encoding(true));
         }
-        else ValidateInput(source, ext);
+        else { ValidateInput(source, ext); File.Copy(source, input); }
         string profile = Path.Combine(work, "profile"); Directory.CreateDirectory(Path.Combine(profile, "user"));
         File.WriteAllText(Path.Combine(profile, "user", "registrymodifications.xcu"), """
             <?xml version="1.0" encoding="UTF-8"?>

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -78,7 +78,7 @@ internal sealed class PdfEngine : IDisposable
     }
     internal static string[] Convert(string source, OutputFormat format, string staging, CancellationToken token)
     {
-        using var pdf = new PdfEngine(source); string stem = Path.GetFileNameWithoutExtension(source);
+        using var pdf = new PdfEngine(source); string stem = Conversion.OutputStem(source);
         if (format.Extension == "txt") { string path = Path.Combine(staging, stem + ".txt"); File.WriteAllText(path, pdf.Text(), new UTF8Encoding(false)); return [path]; }
         var result = new List<string>();
         for (int i = 0; i < pdf.PageCount; i++)
