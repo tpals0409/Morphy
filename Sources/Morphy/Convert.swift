@@ -62,6 +62,20 @@ enum Routes {
     static var pdfOutputs: Set<Format> { imageOutputs.subtracting([.pdf]).union([.txt]) }
 }
 
+enum OutputNames {
+    static func stem(_ source: URL) -> String {
+        var name = source.deletingPathExtension().lastPathComponent
+        let extensions = Set(Routes.images.keys).union(Routes.office.keys)
+            .union(Format.allCases.map { $0.ext }).union(["svg", "markdown", "htm"])
+        while extensions.contains((name as NSString).pathExtension.lowercased()) {
+            let shorter = (name as NSString).deletingPathExtension
+            if shorter.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { break }
+            name = shorter
+        }
+        return name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "converted" : name
+    }
+}
+
 struct Input {
     enum Kind { case image, office, pdf, web }
     let url: URL
@@ -156,7 +170,7 @@ enum Pipeline {
             for out in outs { try validate(out, format) }
             if token.cancelled { return .cancelled }
             // One result keeps the source name; several keep their own: "name-시트.csv" per sheet, "name-01.png" per page.
-            let base = { (out: URL) in outs.count == 1 ? source.deletingPathExtension().lastPathComponent : out.deletingPathExtension().lastPathComponent }
+            let base = { (out: URL) in outs.count == 1 ? OutputNames.stem(source) : out.deletingPathExtension().lastPathComponent }
             return .done(try outs.map { try commit($0, base: base($0), ext: format.ext, in: folder) })
         } catch {
             if token.cancelled { return .cancelled }
@@ -296,7 +310,7 @@ enum PDFPages {
 
     static func convert(_ source: URL, to format: Format, in dir: URL, _ token: CancelToken) throws -> [URL] {
         guard let doc = PDFDocument(url: source), !doc.isLocked else { throw MorphyError("PDF를 열 수 없어요. 원본 파일을 확인해 주세요.") }
-        let base = source.deletingPathExtension().lastPathComponent
+        let base = OutputNames.stem(source)
         if format == .txt {
             let text = try text(source, doc)
             guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
@@ -394,7 +408,7 @@ enum Office {
     static func convert(_ source: URL, to format: Format, in dir: URL, _ token: CancelToken) throws -> [URL] {
         guard let soffice, let target = targets[format] else { throw MorphyError("문서 변환 기능이 아직 추가되지 않았어요.") }
         let ext = source.pathExtension.lowercased()
-        let copy = dir.appendingPathComponent("in").appendingPathComponent(source.lastPathComponent)
+        let copy = dir.appendingPathComponent("in").appendingPathComponent(OutputNames.stem(source) + "." + source.pathExtension)
         try FileManager.default.createDirectory(at: copy.deletingLastPathComponent(), withIntermediateDirectories: true)
         if Routes.textInputs.contains(ext) {
             // Korean CSV/TXT is often CP949 (Excel's default); LibreOffice gets UTF-8 either way.

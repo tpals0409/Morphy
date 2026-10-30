@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -31,6 +31,17 @@ internal static class Conversion
     internal static readonly string[] WebOutputs = ["pdf", "jpg"];   // HTML through WebView2, offline (WebEngine, D11)
     internal static string Normalize(string ext) => ext.ToLowerInvariant() switch { "jpeg" or "jpe" or "jfif" => "jpg", "tif" => "tiff", "heif" => "heic", "markdown" => "md", "htm" => "html", var s => s };
     internal static string Extension(string path) => Normalize(Path.GetExtension(path).TrimStart('.'));
+    internal static string OutputStem(string source)
+    {
+        string stem = Path.GetFileNameWithoutExtension(source);
+        while (ImageExtensions.Contains(Extension(stem)) || OfficeRoutes.ContainsKey(Extension(stem)) || Formats.Any(f => f.Extension == Extension(stem)))
+        {
+            string shorter = Path.GetFileNameWithoutExtension(stem);
+            if (string.IsNullOrWhiteSpace(shorter)) break;
+            stem = shorter;
+        }
+        return string.IsNullOrWhiteSpace(stem) ? "converted" : stem;
+    }
     internal static OutputFormat[] Outputs(string path)
     {
         string ext = Extension(path);
@@ -51,7 +62,7 @@ internal static class Conversion
         CheckInput(source);
         if (!Outputs(source).Contains(format)) throw new IOException("지원하지 않는 변환이에요.");
         token.ThrowIfCancellationRequested();
-        string ext = Extension(source), stem = Path.GetFileNameWithoutExtension(source);
+        string ext = Extension(source), stem = OutputStem(source);
         string target = Path.Combine(staging, stem + "." + format.Extension);
         string[] outputs;
         if (ext == "pdf") outputs = PdfEngine.Convert(source, format, staging, token);

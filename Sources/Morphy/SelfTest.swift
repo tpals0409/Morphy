@@ -11,6 +11,9 @@ enum SelfTest {
             print(cond ? "ok   " : "FAIL ", what)
             ok = ok && cond
         }
+        for (input, expected) in [("photo.jpg.png", "photo"), ("photo.PNG.PNG", "photo"), ("report.v1.png", "report.v1"), ("report.pdf.docx", "report"), ("photo.JPEG.png", "photo"), ("pdf.png", "pdf")] {
+            check(OutputNames.stem(URL(fileURLWithPath: input)) == expected, "output name: " + input)
+        }
         let fm = FileManager.default
         let dir = fm.temporaryDirectory.appendingPathComponent("morphy-selftest-\(UUID().uuidString)")
         try! fm.createDirectory(at: dir, withIntermediateDirectories: true)
