@@ -124,6 +124,10 @@ enum SelfTest {
 
         engineChecks(dir, check)
         webChecks(dir, png, check)
+        check(Launch.isMisplaced("/Volumes/Morphy 0.1.13/Morphy.app"), "launch: running from the DMG is flagged")
+        check(Launch.isMisplaced("/private/var/folders/xy/T/AppTranslocation/1A2B/d/Morphy.app"), "launch: App Translocation is flagged")
+        check(!Launch.isMisplaced("/Applications/Morphy.app") && !Launch.isMisplaced(NSHomeDirectory() + "/Applications/Morphy.app"), "launch: Applications folders are fine")
+        check(Launch.otherInstance([NSRunningApplication.current]) == nil, "launch: this process alone is not a second copy")
         let tableAfterText = "설명입니다.\n| 월 | 매출 |\n|---|---:|\n| 1월 | 100 |"
         check(Office.separateTables(tableAfterText) == "설명입니다.\n\n| 월 | 매출 |\n|---|---:|\n| 1월 | 100 |", "markdown: blank line added before a table under text")
         check(Office.separateTables("글\r\n월 | 매출\r\n---|---\r\n1월 | 100\r\n").contains("글\r\n\n월 | 매출"), "markdown: also for tables without outer pipes and CRLF")
