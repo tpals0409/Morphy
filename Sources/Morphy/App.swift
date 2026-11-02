@@ -58,7 +58,7 @@ extension Job {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
-    private let status = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+    private lazy var status = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)  // created only after Launch passes
     private let trigger = OptionTrigger()
     private let queue = JobQueue()
     private let installer = EngineInstaller.shared
@@ -68,6 +68,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var updating = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        guard Launch.shouldContinue() else { return NSApp.terminate(nil) }  // a second copy, or run from the DMG (D12)
         status.button?.image = Self.menuBarIcon
         status.button?.imagePosition = .imageLeading
         let menu = NSMenu()

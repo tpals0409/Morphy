@@ -111,3 +111,9 @@ Answers docs/release.md's open "앱 자동 업데이트" item without Sparkle.
 - **Offline:** every request that isn't a local file is blocked (Mac: a WebKit content rule; Windows: a 403 for every non-file request), navigation away and pop-ups are cancelled, and the page reads only its own folder. Scripts run, with a time limit (20s Mac, 30s Windows). A page saved with "웹페이지, 전체" works; images, fonts or scripts on other servers are simply missing.
 - **Why not LibreOffice:** it imports HTML as a word-processor document and loses flex/grid layout and web fonts.
 - **Why offline by default:** the site and FAQ promise that conversion needs no internet and sends nothing out; loading a page's remote assets would contact those servers. An opt-in "load external resources" setting can come later if pages regularly come out incomplete.
+
+## D12 · 2026-11-02 · One Morphy at a time, from the Applications folder
+
+- **Problem:** the Mac app had no single-instance check (Windows has one). Opening Morphy inside the DMG and again from /Applications ran two copies: two menu bar icons, a ring that could open twice, two entries in the Accessibility list. Opening it straight from Downloads without moving it makes macOS run a translocated copy, which counts as yet another location and can't update itself (D9).
+- **Now:** at launch, before the menu bar icon exists, Morphy checks for another running process with its bundle ID. If there is one, it says "Morphy가 이미 실행 중이에요" (with the other copy's path when it differs) and quits. If it runs from `/Volumes/…` or an `AppTranslocation` path, it asks the user to move it to the Applications folder, with **종료** (default) or **이대로 실행**.
+- **Kept:** the update relaunch (D9) waits for the old process to exit before opening the new copy, so it never trips the check.
